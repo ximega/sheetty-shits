@@ -1,0 +1,4 @@
+tests
+.env
+.mypy_cache
+.vscode
