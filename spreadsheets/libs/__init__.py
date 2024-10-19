@@ -2,7 +2,10 @@ __all__ = [
     'String',
     'Array',
     'Integer',
+    'Multiple'
     '_CellValues',
+    '_LiteralTypes',
+    '_LiteralTypesExt'
 ]
 
 
@@ -10,6 +13,3 @@ __all__ = [
 from .string import String
 from .integer import Integer
 from .array import Array
-
-
-type _CellValues = String | Integer | Array

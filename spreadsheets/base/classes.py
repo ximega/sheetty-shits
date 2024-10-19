@@ -6,64 +6,34 @@ __all__ = [
 
 
 
-import math
-from ..libs import _CellValues
-from ..libs.utils import _LiteralTypes, _highest_power_of
 from typing import Self
+from ..libs.utils import _LiteralTypesExt, _CellValues
 
 
 type PositiveInteger = int
 
 class _Address:
-    valid_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ" # define in order of all letters
+    __slots__ = ['__row', '__col', '__value']
+    # define in order of all letters, 
+    # changing this though won't affect functionality, 
+    # as nothing references to this var
+    valid_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ" 
     base = len(valid_chars)
     
     @classmethod
     def get_col_by_num(cls, num: PositiveInteger) -> str:
-        if num < 1:
-            raise ValueError("param 'num' cannot be lower than 1")
-        
-        # finding all ba
-        all_n: list[int] = []
-        power = 0
-        while True:
-            n = cls.base ** power
-            if n > num: break
-            all_n.append(n)
-            power += 1
-        
-        # finding the column itself
         col = str()
-        c_num = num 
-        all_n = all_n[::-1]
-        for index, n in enumerate(all_n):
-            multiplier = c_num // n
-            if (multiplier == cls.base + 1):
-                multiplier -= 1
-            
-            mul = n * multiplier
-            if (mul == c_num) and (n != 1):
-                multiplier -= 1
-                    
-            char = cls.valid_chars[multiplier-1]
-            
-            if (char == 'A') and (index != len(all_n)-1):
-                next_n = all_n[index+1]
-                if next_n != 1:
-                    next_multiplier = c_num // next_n
-                    if next_multiplier == cls.base+1:
-                        continue
-            
-            col += char
-            c_num -= mul
-        
-        return col
+        while num > 0:
+            num -= 1
+            col += chr(num % cls.base + ord('A'))
+            num //= 26
+        return col[::-1]
         
     @classmethod
     def get_col_num(cls, col: str) -> int:
         col_num = 0
-        for index, char in enumerate(col[::-1]):
-            col_num += (cls.valid_chars.index(char)+1) * cls.base**(index)
+        for char in col:
+            col_num = col_num * cls.base + (ord(char) - ord('A') + 1)
         return col_num
     
     def __new__(cls, col: str, row: int, spreadsheets_limits: dict[str, int]) -> Self:
@@ -82,29 +52,67 @@ class _Address:
         return instance
     
     def __init__(self, col: str, row: int, spreadsheets_limits: tuple[int, int]) -> None:
-        self.col = col
-        self.row = row
-        self.value = f"{col}{row}"
+        self.__col = col
+        self.__row = row
+        self.__value = f"{col}{row}"
+        
+    @property
+    def col(self): return self.__col
+    @property
+    def row(self): return self.__row
         
     def __str__(self) -> str:
-        return f"{self.col}{self.row}"
+        return self.__value
 
 class _Cell:
-    def __init__(self, address: _Address, type: _LiteralTypes, value: _CellValues):
-        pass
+    __slots__ = ['__address', '__type', '__value']
+    
+    def __new__(cls, address: _Address, type: _LiteralTypesExt, value: _CellValues) -> Self:
+        instance = super().__new__(cls)
+        
+        if not isinstance(value, type):
+            raise ValueError(f"")
+        
+        return instance
+    
+    def __init__(self, address: _Address, type: _LiteralTypesExt, value: _CellValues) -> None:
+        self.__address = address
+        self.__type = type
+        self.__value == value
+        
+    def value(self, new_value: _CellValues = None) -> _CellValues | None:
+        if new_value is None:
+            return self.__value
+        elif isinstance(new_value, _CellValues):
+            self.__value = new_value
+        else:
+            raise TypeError("new_value must be of type _CellValues")
+        
+    def __str__(self) -> str:
+        return self.__value
+        
+    def __repr__(self) -> str:
+        return f"{self.__address}: {self.__value} of type {self.__type.__name__}"
 
 class Spreadsheets:
+    __slots__ = ['__dynamic', '__char_width', '__limits', '__content']
+    
     def __init__(self, *,
             dynamic: bool = False, 
             char_width: PositiveInteger = 7, 
             col_max: PositiveInteger = 1000,
             row_max: PositiveInteger = 1000, 
-        ):
+        ) -> None:
         
         self.__dynamic = dynamic
         self.__char_width = char_width
         self.__limits = {'col': col_max, 'row': row_max}
         self.__content = {}
+        
+    @property
+    def limits(self): return self.__limits
+    
+    def corner_value(self): pass
         
     def printf(self) -> str:
         return ''

@@ -8,6 +8,7 @@ import datetime
 
 
 class Integer:
+    __slots__ = ['__value', '__creation_time', '__id']
     __last_id = 0
     
     def __init__(self, value: int):
@@ -20,6 +21,6 @@ class Integer:
         return str(self.__value)
     
     def __repr__(self) -> str:
-        return f"<Integer> value: {self.__value}, create_time: {self.__creation_time}, id: {self.__id}"
+        return f"<Integer> value: {self.__value}, creation_time: {self.__creation_time}, id: {self.__id}"
     
     
