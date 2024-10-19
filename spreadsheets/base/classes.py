@@ -1,41 +1,70 @@
 __all__ = [
     'Spreadsheets',
-    '_Address'
+    '_Address',
+    '_Cell'
 ]
 
 
 
 import math
 from ..libs import _CellValues
-from ..libs.utils import _LiteralTypes
+from ..libs.utils import _LiteralTypes, _highest_power_of
 from typing import Self
 
 
 type PositiveInteger = int
 
 class _Address:
-    valid_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    valid_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ" # define in order of all letters
+    base = len(valid_chars)
     
     @classmethod
-    def get_col_by_num(cls, num: int) -> str:
-        cnum = num
+    def get_col_by_num(cls, num: PositiveInteger) -> str:
+        if num < 1:
+            raise ValueError("param 'num' cannot be lower than 1")
+        
+        # finding all ba
+        all_n: list[int] = []
+        power = 0
+        while True:
+            n = cls.base ** power
+            if n > num: break
+            all_n.append(n)
+            power += 1
+        
+        # finding the column itself
         col = str()
-        highest_power: int = math.floor(math.log(cnum, 26))
-        for power in range(highest_power, -1, -1):
-            power_of_26 = 26**power
-            char_index = cnum // power_of_26
-            cnum -= char_index * power_of_26
-            if cnum == 0 and num > 26:
-                char_index += 1
-                cnum += power_of_26
-            col += cls.valid_chars[char_index-1]
+        c_num = num 
+        all_n = all_n[::-1]
+        for index, n in enumerate(all_n):
+            multiplier = c_num // n
+            if (multiplier == cls.base + 1):
+                multiplier -= 1
+            
+            mul = n * multiplier
+            if (mul == c_num) and (n != 1):
+                multiplier -= 1
+                    
+            char = cls.valid_chars[multiplier-1]
+            
+            if (char == 'A') and (index != len(all_n)-1):
+                next_n = all_n[index+1]
+                if next_n != 1:
+                    next_multiplier = c_num // next_n
+                    if next_multiplier == cls.base+1:
+                        continue
+            
+            col += char
+            c_num -= mul
+        
         return col
         
     @classmethod
-    def get_col_num(cls, col: str) -> str:
-        col_num = 1
+    def get_col_num(cls, col: str) -> int:
+        col_num = 0
         for index, char in enumerate(col[::-1]):
-            col_num += (cls.valid_chars.index(char)+1) * 26**(index)
+            col_num += (cls.valid_chars.index(char)+1) * cls.base**(index)
+        return col_num
     
     def __new__(cls, col: str, row: int, spreadsheets_limits: dict[str, int]) -> Self:
         instance = super().__new__(cls)
