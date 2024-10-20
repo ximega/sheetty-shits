@@ -13,7 +13,7 @@ sheets.console.add_handler(
     docs='Add any value to a global list of all (added) values'
 )
 
-sheets.cr(
+sheets.execute(
     select('A1').set_val(Array(10))
 )
 

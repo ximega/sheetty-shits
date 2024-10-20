@@ -4,15 +4,15 @@ from spreadsheets.base import rules, Spreadsheets
 
 sheets = Spreadsheets(dynamic=True, char_width=10)
 
-sheets.cr(
+sheets.execute(
     select('B1').set_val(20)
 )
 
-sheets.cr(
+sheets.execute(
     select('B2').set_val(100) # for filling one cells set_val is used
 )
 
-sheets.cr(
+sheets.execute(
     # for settings any formulas or conditions embed is used
     embed('B3').conditional(
         watch('B2'), 
@@ -22,24 +22,24 @@ sheets.cr(
     ) # watch is used to indicate that cell needs to change whenever dependent value changes, otherwise change will be applied only once (when setting this value)
 )
 
-sheets.cr(
+sheets.execute(
     select('B4').set_val('Some string')
 )
 
-sheets.cr( # this will always monitor value of B1 and double it 
+sheets.execute( # this will always monitor value of B1 and double it 
     select('B5').set_val(watch('B2'))
 )
 
 sheets.printf()
 
-sheets.cr(
+sheets.execute(
     select('B1').set_val(30)
 ) # nothing should change as actually nothing has changed to a virtual memo in condition of B3
 
 sheets.printf()
 
 # but if changing B2.... It should trigger change!
-sheets.cr(
+sheets.execute(
     select('B2').set_val(95)
 )
 

@@ -22,6 +22,9 @@ class Integer:
         Integer.__last_id += 1
         self.__id = Integer.__last_id
 
+    def direct_value(self) -> int:
+        return self.__value
+
     def __str__(self) -> str:
         return str(self.__value)
 

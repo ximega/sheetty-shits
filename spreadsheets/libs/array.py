@@ -28,6 +28,9 @@ class Array:
         Array.__last_id += 1
         self.__id = Array.__last_id
 
+    def values(self) -> list[String | Integer]:
+        return self.__values
+
     def __str__(self) -> str:
         return ", ".join([str(x) for x in self.__values])
 

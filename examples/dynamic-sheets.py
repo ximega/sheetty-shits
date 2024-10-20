@@ -11,11 +11,11 @@ sheets.console.add_handler(
     docs='Doubles the values of integers'
 )
 
-sheets.cr(
+sheets.execute(
     select('A-D:1').descending(10)
 )
 
-sheets.cr(
+sheets.execute(
     select('A-D:1').copy('2-6', axis=rules.axis.Y) # so it select downwards (by y axis)
 )
 
