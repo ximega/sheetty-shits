@@ -11,6 +11,10 @@ __all__ = [
 class _Debugger:
     """
     Class that allows to create an instance of debug object inside other libraries for debugging
+
+    Methods doesn't have any clear typing annotations 
+    as it would cause circular import
+    and was decided to leave error-prone code
     """
     __slots__ = ['__obj']
 
@@ -22,4 +26,5 @@ class _Debugger:
         Designed for libs.Array and libs.Multiple
         to list their .__values, if type is set to Integer
         """
-        return [x.direct_value() for x in self.__obj.values()]
+        return [x.get_direct_value() for x in self.__obj.values()]
+    

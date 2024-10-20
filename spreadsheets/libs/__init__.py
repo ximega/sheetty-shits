@@ -11,6 +11,7 @@ __all__ = [
     'String',
     'Array',
     'Integer',
+    'Float',
 ]
 
 
@@ -18,3 +19,4 @@ __all__ = [
 from .string import String
 from .integer import Integer
 from .array import Array
+from .float import Float

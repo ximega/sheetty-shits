@@ -9,13 +9,14 @@ __all__ = [
 
 from .string import String
 from .integer import Integer
+from .float import Float
 from .array import Array
 from .multiple import Multiple
 
 
-type _LiteralTypes = type[String] | type[Integer] | type[Array]
+type _LiteralTypes = type[String] | type[Integer] | type[Float] | type[Array]
 type _LiteralTypesExt = _LiteralTypes | type[Multiple]
-type _CellValues = String | Integer | Array | Multiple
+type _CellValues = String | Integer | Float | Array | Multiple
 
 
 def _highest_power_of(number: int, base: int) -> int:
