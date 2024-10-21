@@ -2,8 +2,9 @@
 spreadsheets.libs contain all libraries that can be used in the spreadsheets.
 
 Most command libraries:
- - Value types: array, integer, multiple, string
+ - Value types: array, integer, multiple, string, float
  - Utilities: utils
+ - Additional types: time (time & date)
 """
 
 
