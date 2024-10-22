@@ -389,30 +389,6 @@ class PreciseTime:
 
         self.__display_format = to
 
-    def update(self) -> None:
-        now = datetime.today()
-        then: datetime = None
-        if self.ms is None:
-            then = datetime(now.year, now.month, now.day, hour=self.h, minute=self.m, second=self.s)
-        else:
-            then = datetime(hour=self.h, minute=self.m, second=self.s, microsecond=self.ms)
-
-        diff = now - then
-        new = then - diff
-
-        self.h = new.hour
-        self.m = new.minute
-        self.s = new.second
-        self.ms = new.microsecond if new.microsecond != 0 else None
-
-        self.__strdata = [
-            str(self.h),
-            str(self.m) if self.m > 9 else '0' + str(self.m),
-            str(self.s) if self.s > 9 else '0' + str(self.s),
-        ]
-        if self.ms is not None:
-            self.__strdata.append(str(self.ms) if self.ms > 9 else '0' + str(self.ms))
-
     def __str__(self) -> str:
         unit_words = [('hour', 'h'), ('minute', 'm'), ('second', 's'), ('millisecond', 'ms')]
         ret: list[str] = []
@@ -447,6 +423,30 @@ class TimePeriod:
 
     def __init__(self, time: Time | PreciseTime | DateTime) -> None:
         pass
+
+    def update(self) -> None:
+        now = datetime.today()
+        then: datetime = None
+        if self.ms is None:
+            then = datetime(now.year, now.month, now.day, hour=self.h, minute=self.m, second=self.s)
+        else:
+            then = datetime(hour=self.h, minute=self.m, second=self.s, microsecond=self.ms)
+
+        diff = now - then
+        new = then - diff
+
+        self.h = new.hour
+        self.m = new.minute
+        self.s = new.second
+        self.ms = new.microsecond if new.microsecond != 0 else None
+
+        self.__strdata = [
+            str(self.h),
+            str(self.m) if self.m > 9 else '0' + str(self.m),
+            str(self.s) if self.s > 9 else '0' + str(self.s),
+        ]
+        if self.ms is not None:
+            self.__strdata.append(str(self.ms) if self.ms > 9 else '0' + str(self.ms))
 
 
 type TimeTypes = Time | Date | PreciseTime | DateTime | TimePeriod
