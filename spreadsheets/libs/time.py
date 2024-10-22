@@ -24,16 +24,11 @@ __all__ = [
 
 
 
-from enum import Enum
-from typing import Literal, Self
+from typing import Self
+from datetime import datetime
+from enum import Enum, auto
 
 type PositiveNumber = int
-# Df - display format
-type DfTimeLiteral = Literal[12, 24, 'fstr', 'str']
-type DfDateLiteral = Literal['default', 'en-us']
-type DfMonthLiteral = Literal['fstr', 'str', 'int']
-type DfYearLiteral = Literal[2, 4]
-type DfPreciseTimeLiteral = Literal['fstr', 'str']
 type CustomTime = str
 type TimeFormat = str
 
@@ -41,6 +36,11 @@ def _inclusive_range(start: int, stop: int) -> range:
     return range(start, stop+1)
 
 
+class DfTime(Enum):
+    H24 = auto()
+    H12 = auto()
+    FSTR = auto()
+    STR = auto()
 
 class Time:
     """
@@ -54,20 +54,20 @@ class Time:
         '__strdata'
     ]
     __last_id = 0
-    __allowed_df_literals = [12, 24, 'fstr', 'str']
 
-    def __new__(cls, h: PositiveNumber, m: PositiveNumber, display_format: DfTimeLiteral = 24) -> Self:
+    def __new__(cls, h: PositiveNumber, m: PositiveNumber, display_format: DfTime = DfTime.H24) -> Self:
         if not 0 <= h <= 23:
             raise ValueError("Hour must equal any number between 0 and 23")
         if not 0 <= m <= 59:
             raise ValueError("Minute must equal any number between 0 and 59")
-        if display_format not in cls.__allowed_df_literals:
-            raise ValueError("Display format must be either 12, 24 or 'str'")
+        
+        if display_format not in DfTime:
+            raise ValueError("Display format must be from DfTime")
 
         cls.__last_id += 1
         return super().__new__(cls)
 
-    def __init__(self, h: PositiveNumber, m: PositiveNumber, display_format: DfTimeLiteral = 24) -> None:
+    def __init__(self, h: PositiveNumber, m: PositiveNumber, display_format: DfTime = DfTime.H24) -> None:
         self.__id = self.__last_id
         self.h = h
         self.m = m
@@ -79,9 +79,9 @@ class Time:
 
     def __str__(self) -> str:
         match self.__display_format:
-            case 24:
+            case DfTime.H24:
                 return ":".join(self.__strdata)
-            case 12:
+            case DfTime.H24:
                 suffix = ' am' if self.h in _inclusive_range(0, 11) else ' pm'
 
                 # as in this format it is forbidden to have hour equal 0
@@ -98,34 +98,47 @@ class Time:
                     self.__strdata[1] = '0' + self.__strdata[1][-1]
 
                 return ":".join(self.__strdata) + suffix
-            case 'fstr':
+            case DfTime.FSTR:
                 return f"{self.h} hour{'s' if self.h != 1 else ''} and {self.m} minute{'s' if self.m != 1 else ''}"
-            case 'str':
+            case DfTime.STR:
                 return f"{self.h} h {self.m} m"
 
     def __repr__(self) -> str:
         return f"<Time> id: {self.__id} \
             \nvalue: {self.__str__()}"
 
-    def change_display_format(self, to: DfTimeLiteral) -> None:
+    def change_display_format(self, to: DfTime) -> None:
         """Changes display format of time
 
         Args:
-            to (Literal[12, 24, 'fstr', 'str']):
-                1) 12 - 12-hour display format with an annotation following the time
+            to (DfTime):
+                1) DfTime.H12 - 12-hour display format with an annotation following the time
                 (12:44 am, 7:23 am, 9:37 pm, 12:33 pm)
-                2) 24 - 24-hour display format. Plain hour and minutes
+                2) DfTime.H24 - 24-hour display format. Plain hour and minutes
                 (12:44, 19:23, 21:37, 0:33)
-                3) 'fstr' - displays words 'hours' and 'minutes' as full words
-                4) 'str' - displays words 'hours' and 'minutes' as shortened words with first letter
+                3) DfTime.FSTR - displays words 'hours' and 'minutes' as full words
+                4) DfTime.STR - displays words 'hours' and 'minutes' as shortened words with first letter
         """
-        if to not in self.__allowed_df_literals:
+        if to not in DfTime:
             raise ValueError("Display format must be either 12, 24, 'fstr' or 'str'")
 
         if self.__display_format == to:
             return
 
         self.__display_format = to
+
+class DfDate(Enum):
+    DEFAULT = auto()
+    EN_US = auto()
+
+class DfDateMonth(Enum):
+    INT = auto()
+    STR = auto()
+    FSTR = auto()
+
+class DfDateYear(Enum):
+    CHAR2 = auto()
+    CHAR4 = auto()
 
 class Date:
     """
@@ -140,9 +153,6 @@ class Date:
         '__display_format', '__month_display_format', '__year_display_format'
     ]
     __last_id = 0
-    __allowed_df_literals = ['default', 'en-us']
-    __allowed_df_month_literals = ['fstr', 'str', 'int']
-    __allowed_df_year_literals = [2, 4]
     __current_century = 20
     __months = [
         "January", "February", "March",
@@ -156,7 +166,7 @@ class Date:
     def is_leap_year(cls, year) -> bool:
         return (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)
 
-    def __new__(cls, d: PositiveNumber, m: PositiveNumber, y: PositiveNumber, display_format: DfDateLiteral = 'default') -> Self:
+    def __new__(cls, d: PositiveNumber, m: PositiveNumber, y: PositiveNumber, display_format: DfDate = DfDate.DEFAULT) -> Self:
         if not 1 <= d <= 31:
             raise ValueError("The day must be between 1 and 31")
 
@@ -174,11 +184,14 @@ class Date:
         # April, June, September, November
         if (m in [4, 6, 9, 11]) and (d > 30):
             raise ValueError(f"The day cannot be more than 30 in {cls.__months[m-1]}")
+        
+        if display_format not in DfDate:
+            raise ValueError("display_format must be from DfDate")
 
         cls.__last_id += 1
         return super().__new__(cls)
 
-    def __init__(self, d: PositiveNumber, m: PositiveNumber, y: PositiveNumber, display_format: DfDateLiteral = 'default') -> None:
+    def __init__(self, d: PositiveNumber, m: PositiveNumber, y: PositiveNumber, display_format: DfDate = DfDate.DEFAULT) -> None:
         self.__id = self.__last_id
         self.d = d
         self.m = m
@@ -188,21 +201,21 @@ class Date:
             str(m) if m > 9 else '0' + str(m),
             str(y),
         ]
-        self.__display_format: DfDateLiteral = display_format
-        self.__month_display_format: DfMonthLiteral = 'int'
-        self.__year_display_format: DfYearLiteral = 4
+        self.__display_format: DfDate = display_format
+        self.__month_display_format: DfDateMonth = DfDateMonth.INT
+        self.__year_display_format: DfDateYear = DfDateYear.C4
 
-    def change_display_format(self, to: DfDateLiteral) -> None:
+    def change_display_format(self, to: DfDate) -> None:
         """Changes display format of date
 
         Args:
-            to (Literal['default', 'en-us']):
-                1) 'default': displays day first, then month
+            to (DfDate):
+                1) DfDate.DEFAULT: displays day first, then month
                 (24/07/2024, 24 July 2024, 24/07/24, 24 Jul 2024)
-                2) 'en-us': us display format, where month is displayed first, then day
+                2) DfDate.EN_US: us display format, where month is displayed first, then day
                 (07/24/2024, July 24 2024, 07/24/24, Jul 24 2024)
         """
-        if to not in self.__allowed_df_literals:
+        if to not in DfDate:
             raise ValueError("Display format must be either 'default' or 'en-us'")
 
         if self.__display_format == to:
@@ -211,32 +224,32 @@ class Date:
         self.__display_format = to
         self.__strdata[0], self.__strdata[1] = self.__strdata[1], self.__strdata[0]
 
-    def change_month_display_format(self, to: DfMonthLiteral, *, auto: bool = False) -> None:
+    def change_month_display_format(self, to: DfDateMonth, *, auto: bool = False) -> None:
         """Changes month display format
 
         Args:
             to (DfMonthLiteral):
-                1) 'fstr': displays month as a word. Will be shown all letters in the month's name
+                1) DfDateMonth.FSTR: displays month as a word. Will be shown all letters in the month's name
                 (February, October)
                 Note: cannot set to this display format if year format is 2 char long.
-                2) 'str': displays month as a three character long word.
+                2) DfDateMonth.STR: displays month as a three character long word.
                 (Feb, Oct)
                 Note: cannot set to this display format if year format is 2 char long.
-                3) 'int': displays month as a number, according to its order
+                3) DfDateMonth.INT: displays month as a number, according to its order
 
             auto (bool, optional):
                 changes automatically year display format if contradiction occurs.
                 Not recommended to use. Defaults to False.
 
         """
-        if to not in self.__allowed_df_month_literals:
+        if to not in DfDateMonth:
             raise ValueError("Month display format must be either 'str' or 'int'")
 
-        if (to != 'int') and (self.__year_display_format == 2):
+        if (to != DfDateMonth.INT) and (self.__year_display_format == DfDateYear.CHAR2):
             if not auto:
                 raise ValueError(f"Can't set month display format to {to} as year display format is 2 char long")
 
-            self.__year_display_format = 4
+            self.__year_display_format = DfDateYear.CHAR4
             self.__strdata[2] = str(self.y)
 
         if self.__month_display_format == to:
@@ -245,23 +258,23 @@ class Date:
         self.__month_display_format = to
 
         match to:
-            case 'fstr':
+            case DfDateMonth.FSTR:
                 self.__strdata[1] = self.__months[self.m - 1]
-            case 'str':
+            case DfDateMonth.STR:
                 self.__strdata[1] = self.__months[self.m - 1][0:3]
-            case 'int':
+            case DfDateMonth.INT:
                 self.__strdata[1] = str(self.m) if self.m > 9 else '0' + str(self.m)
 
-    def change_year_display_format(self, to: DfYearLiteral, *, auto: bool = False) -> None:
+    def change_year_display_format(self, to: DfDateYear, *, auto: bool = False) -> None:
         """Changes month display format
 
         Args:
-            to (DfMonthLiteral):
-                1) 2: two characters long year display.
+            to (DfDateYear):
+                1) DfDateYear.CHAR2: two characters long year display.
                 Allowed for years that are in current century.
                 Not allowed for the year that ends on 00
                 (For 20th century: 01, 09, 11, 16, 24, 25, 26, 27)
-                2) 4: four characters long year display.
+                2) DfDateYear.CHAR4: four characters long year display.
                 Also works for any year that is not four-char-long
                 (2001, 1999, 1456, 2568)
 
@@ -273,15 +286,15 @@ class Date:
         if to not in self.__allowed_df_year_literals:
             raise ValueError("Year display format must be either 2 or 4")
 
-        if to == 2:
+        if to == DfDateYear.CHAR2:
             if not self.__current_century*100 < self.y < (self.__current_century+1)*100:
                 raise ValueError(f"Two char length year format not allowed for this year: {self.y}")
 
-            if self.__month_display_format != 'int':
+            if self.__month_display_format != DfDateMonth.INT:
                 if not auto:
                     raise ValueError(f"Can't set year display format, as month display format is {self.__month_display_format}")
-
-                self.__month_display_format = 'int'
+                
+                self.__month_display_format = DfDateMonth.INT
 
         if self.__year_display_format == to:
             return
@@ -289,19 +302,23 @@ class Date:
         self.__year_display_format = to
 
         match to:
-            case 2:
+            case DfDateYear.CHAR2:
                 self.__strdata[2] = str(self.y)[2:]
-            case 4:
+            case DfDateYear.CHAR4:
                 self.__strdata[2] = str(self.y)
 
     def __str__(self) -> str:
-        separator = '/' if self.__month_display_format == 'int' else ' '
+        separator = '/' if self.__month_display_format == DfDateMonth.INT else ' '
 
         return separator.join(self.__strdata)
 
     def __repr__(self) -> str:
         return f"<Date> id: {self.__id} \
             \nvalue: {self.__str__()}"
+
+class DfPreciseTime(Enum):
+    FSTR = auto()
+    STR = auto()
 
 class PreciseTime:
     """An expansion to libs.time.Time type
@@ -316,11 +333,10 @@ class PreciseTime:
         '__strdata'
     ]
     __last_id = 0
-    __allowed_df_literals = ['fstr', 'str']
 
     def __new__(cls,
             h: PositiveNumber, m: PositiveNumber, s: PositiveNumber, ms: PositiveNumber = None,
-            display_format: DfTimeLiteral = 'fstr'
+            display_format: DfPreciseTime = DfPreciseTime.FSTR
         ) -> Self:
 
         if not 1 <= h <= 23:
@@ -339,7 +355,7 @@ class PreciseTime:
 
     def __init__(self,
             h: PositiveNumber, m: PositiveNumber, s: PositiveNumber, ms: PositiveNumber = None,
-            display_format: DfPreciseTimeLiteral = 'fstr'
+            display_format: DfPreciseTime = DfPreciseTime.FSTR
         ) -> None:
 
         self.__id = self.__last_id
@@ -356,22 +372,46 @@ class PreciseTime:
         if ms is not None:
             self.__strdata.append(str(ms) if ms > 9 else '0' + str(ms))
 
-    def change_display_format(self, to: DfPreciseTimeLiteral):
+    def change_display_format(self, to: DfPreciseTime):
         """Changes display format of PreciseTime
 
         Args:
-            to (DfPreciseTimeLiteral): 
-                1) 'fstr': will display units with their integer value
-                2) 'str': will display shortened versions of units (1 char) with their integer value
+            to (DfPreciseTime): 
+                1) DfPreciseTime.FSTR: will display units with their integer value
+                2) DfPreciseTime.STR: will display shortened versions of units (1 char) with their integer value
         """
 
-        if to not in self.__allowed_df_literals:
-            raise ValueError(f"Display format must equal one of following: {",".join(self.__allowed_df_literals)}")
+        if to not in DfPreciseTime:
+            raise ValueError(f"Display format must equal one of following: {", ".join([str(x) for x in DfPreciseTime])}")
 
         if to == self.__display_format:
             return
 
         self.__display_format = to
+
+    def update(self) -> None:
+        now = datetime.today()
+        then: datetime = None
+        if self.ms is None:
+            then = datetime(now.year, now.month, now.day, hour=self.h, minute=self.m, second=self.s)
+        else:
+            then = datetime(hour=self.h, minute=self.m, second=self.s, microsecond=self.ms)
+
+        diff = now - then
+        new = then - diff
+
+        self.h = new.hour
+        self.m = new.minute
+        self.s = new.second
+        self.ms = new.microsecond if new.microsecond != 0 else None
+
+        self.__strdata = [
+            str(self.h),
+            str(self.m) if self.m > 9 else '0' + str(self.m),
+            str(self.s) if self.s > 9 else '0' + str(self.s),
+        ]
+        if self.ms is not None:
+            self.__strdata.append(str(self.ms) if self.ms > 9 else '0' + str(self.ms))
 
     def __str__(self) -> str:
         unit_words = [('hour', 'h'), ('minute', 'm'), ('second', 's'), ('millisecond', 'ms')]
@@ -381,9 +421,9 @@ class PreciseTime:
             if int(unit) == 0:
                 continue
 
-            unit_word = unit_words[index][0] if self.__display_format == 'fstr' else unit_words[index][1]
+            unit_word = unit_words[index][0] if self.__display_format == DfPreciseTime.STR else unit_words[index][1]
             suffix = 's' if int(unit) > 1 else ''
-            ret.append(f"{unit} {unit_word}{suffix if self.__display_format == 'fstr' else ''}")
+            ret.append(f"{unit} {unit_word}{suffix if self.__display_format == DfPreciseTime.FSTR else ''}")
 
         return " ".join(ret)
 
@@ -392,7 +432,8 @@ class PreciseTime:
             \nvalue: {self.__str__()}"
 
 class DateTime:
-    pass
+    """Combine two time types: time.Time and time.Date
+    """
 
 class TimePeriod:
     """
