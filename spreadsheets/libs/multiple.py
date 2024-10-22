@@ -10,6 +10,7 @@ __all__ = [
 
 
 import datetime
+from typing import Self
 from .array import Array
 from .integer import Integer
 from .string import String
@@ -28,13 +29,16 @@ class Multiple:
     __slots__ = ['__type', '__current_value', '__values', '__creation_time', '__id', 'debugger']
     __last_id = 0
 
+    def __new__(cls, *args, **kwargs) -> Self:
+        cls.__last_id += 1
+        return super().__new__(cls)
+
     def __init__(self, multiple_type: _LiteralTypes, values: list[_CellValues]):
         self.__type = multiple_type
         self.__current_value: _CellValues | None = None
         self.__values = values
         self.__creation_time = datetime.datetime.now()
-        Multiple.__last_id += 1
-        self.__id = Multiple.__last_id
+        self.__id = self.__last_id
         self.debugger = _Debugger(self)
 
     def values(self) -> list[_CellValues]:

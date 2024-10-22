@@ -22,7 +22,7 @@ from ..libs.utils import _LiteralTypesExt, _CellValues
 type PositiveInteger = int
 
 class _Address:
-    __slots__ = ['__row', '__col', '__value']
+    __slots__ = ['__row', '__col', '__value', '__spreadsheets_limits']
     # define in order of all letters,
     # changing this though won't affect functionality,
     # as nothing references to this var
@@ -81,6 +81,7 @@ class _Address:
         self.__col = col
         self.__row = row
         self.__value = f"{col}{row}"
+        self.__spreadsheets_limits = spreadsheets_limits
 
     @property
     def col(self): return self.__col

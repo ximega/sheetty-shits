@@ -10,17 +10,21 @@ __all__ = [
 
 
 import datetime
+from typing import Self
 
 
 class String:
     __slots__ = ['__value', '__creation_time', '__id']
     __last_id = 0
 
+    def __new__(cls, *args, **kwargs) -> Self:
+        cls.__last_id += 1
+        return super().__new__(cls)
+
     def __init__(self, value: str):
         self.__value = value
         self.__creation_time = datetime.datetime.now()
-        String.__last_id += 1
-        self.__id = String.__last_id
+        self.__id = self.__last_id
 
     def __str__(self) -> str:
         return self.__value
