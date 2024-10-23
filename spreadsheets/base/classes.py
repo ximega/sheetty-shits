@@ -9,20 +9,21 @@ class Spreadsheets: used to create, delete, and do other manipulations with it
 
 __all__ = [
     'Spreadsheets',
-    '_Address',
-    '_Cell'
+    'Cell',
+    'Address'
 ]
 
 
 
 from typing import Self
-from ..libs.utils import _LiteralTypesExt, _CellValues
+from ..libs.utils import LiteralTypesExt, CellValues
+from ..libs import Integer
 
 
 type PositiveInteger = int
 
-class _Address:
-    __slots__ = ['__row', '__col', '__value', '__spreadsheets_limits']
+class Address:
+    __slots__ = ['__row', '__col', '__value']
     # define in order of all letters,
     # changing this though won't affect functionality,
     # as nothing references to this var
@@ -77,11 +78,10 @@ class _Address:
 
         return instance
 
-    def __init__(self, col: str, row: int, spreadsheets_limits: tuple[int, int]) -> None:
+    def __init__(self, col: str, row: int, spreadsheets_limits: dict[str, int]) -> None:
         self.__col = col
         self.__row = row
         self.__value = f"{col}{row}"
-        self.__spreadsheets_limits = spreadsheets_limits
 
     @property
     def col(self): return self.__col
@@ -91,10 +91,10 @@ class _Address:
     def __str__(self) -> str:
         return self.__value
 
-class _Cell:
+class Cell:
     __slots__ = ['__address', '__type', '__value']
 
-    def __new__(cls, address: _Address, cell_type: _LiteralTypesExt, value: _CellValues) -> Self:
+    def __new__(cls, address: Address, cell_type: LiteralTypesExt, value: CellValues) -> Self:
         instance = super().__new__(cls)
 
         if not isinstance(value, cell_type):
@@ -102,34 +102,32 @@ class _Cell:
 
         return instance
 
-    def __init__(self, address: _Address, cell_type: _LiteralTypesExt, value: _CellValues) -> None:
+    def __init__(self, address: Address, cell_type: LiteralTypesExt, value: CellValues) -> None:
         self.__address = address
         self.__type = cell_type
         self.__value = value
 
-    def value(self, new_value: _CellValues = None) -> _CellValues | None:
-        """_summary_
+    def value(self, new_value: CellValues | None = None) -> CellValues | None:
+        """Returns or sets a new value to self.__value
 
         Args:
-            new_value (_CellValues, optional): the new value for _Cell.__value. Defaults to None.
+            new_value (CellValues, optional): the new value for _Cell.__value. Defaults to None.
 
         Raises:
-            TypeError: if the new value is not one of _CellValues
+            TypeError: if the new value is not one of CellValues
 
         Returns:
-            _CellValues | None: Return _CellValues if no parameter is provided.
+            CellValues | None: Return CellValues if no parameter is provided.
                                 Return None if parameter was provided
                                 and sets the value of _Cell.__value to the new value (from parameter).
         """
         if new_value is None:
             return self.__value
-        elif isinstance(new_value, _CellValues):
-            self.__value = new_value
-        else:
-            raise TypeError("new_value must be of type _CellValues")
+        
+        self.__value = new_value
 
     def __str__(self) -> str:
-        return self.__value
+        return str(self.__value)
 
     def __repr__(self) -> str:
         return f"{self.__address}: {self.__value} of type {self.__type.__name__}"
@@ -156,13 +154,14 @@ class Spreadsheets:
     def limits(self):
         return f"col: {self.__limits['col']}\nrow: {self.__limits['row']}"
 
-    def corner_value(self) -> _Cell:
+    def corner_value(self) -> Cell:
         """Return the most bottom and right value in the spreadsheets.
         Used to find the width and height for formatting spreadsheets
         
         Returns:
             _Cell: the cell that is in corner.
         """ 
+        return Cell(Address('A',1,{'r':1}),Integer,Integer(1))
 
     def printf(self) -> str:
         """Formats and prints spreadsheets to a console

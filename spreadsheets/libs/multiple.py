@@ -14,7 +14,7 @@ from typing import Self
 from .array import Array
 from .integer import Integer
 from .string import String
-from ..libs.debug import _Debugger
+from ..libs.debug import Debugger
 
 
 type _LiteralTypes = type[String] | type[Integer] | type[Array]
@@ -29,7 +29,7 @@ class Multiple:
     __slots__ = ['__type', '__current_value', '__values', '__creation_time', '__id', 'debugger']
     __last_id = 0
 
-    def __new__(cls, *args, **kwargs) -> Self:
+    def __new__(cls, multiple_type: _LiteralTypes, values: list[_CellValues]) -> Self:
         cls.__last_id += 1
         return super().__new__(cls)
 
@@ -39,7 +39,7 @@ class Multiple:
         self.__values = values
         self.__creation_time = datetime.datetime.now()
         self.__id = self.__last_id
-        self.debugger = _Debugger(self)
+        self.debugger = Debugger(self)
 
     def values(self) -> list[_CellValues]:
         return self.__values

@@ -1,8 +1,8 @@
 __all__ = [
-    '_LiteralTypes',
-    '_highest_power_of',
-    '_LiteralTypesExt',
-    '_CellValues'
+    'LiteralTypes',
+    'highest_power_of',
+    'LiteralTypesExt',
+    'CellValues'
 ]
 
 
@@ -12,15 +12,26 @@ from .integer import Integer
 from .float import Float
 from .array import Array
 from .multiple import Multiple
+from .time import Time, Date, PreciseTime, DateTime
+from .period import TimePeriod
 
 
-type _LiteralTypes = type[String] | type[Integer] | type[Float] | type[Array]
-type _LiteralTypesExt = _LiteralTypes | type[Multiple]
-type _CellValues = String | Integer | Float | Array | Multiple
+type LiteralTypes = type[String] | type[Integer] | type[Float] | type[Array]
+type LiteralTypesExt = LiteralTypes | type[Multiple]
+type CellValues = String | Integer | Float | Array | Multiple
 
 
-def _highest_power_of(number: int, base: int) -> int:
+def highest_power_of(number: int, base: int) -> int:
     power = 0
     while base ** (power + 1) <= number:
         power += 1
     return power
+
+type CustomTime = str
+type TimeFormat = str
+
+type TimeTypes = Time | Date | PreciseTime | DateTime | TimePeriod
+type TimeLiteralTypes = type[Time] | type[Date] | type[PreciseTime] | type[DateTime] | type[TimePeriod]
+
+def extract_time(time: CustomTime, format: TimeFormat, type_to: TimeLiteralTypes) -> TimeTypes:
+    return

@@ -10,16 +10,18 @@ __all__ = [
 
 
 import datetime
-from typing import Self
+from typing import TypeVar, Self
 
+_T = TypeVar("_T")
 
 class Float:
     __slots__ = ['__value', '__creation_time', '__id']
     __last_id = 0
 
-    def __new__(cls, *args, **kwargs) -> Self:
+    def __new__(cls, value: float) -> Self:
         cls.__last_id += 1
         return super().__new__(cls)
+    
 
     def __init__(self, value: float) -> None:
         self.__value = value

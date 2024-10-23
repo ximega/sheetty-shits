@@ -33,11 +33,11 @@ class Boolean:
         return super().__new__(cls)
 
     def __init__(self, value: BooleanLiteral) -> None:
-        self.__value = value
+        self.__value: BooleanLiteral = value
         self.__creation_time = datetime.datetime.now()
         self.__id = self.__last_id
 
-    def get_direct_value(self) -> float:
+    def get_direct_value(self) -> BooleanLiteral:
         return self.__value
 
     def change_value(self, new_value: BooleanLiteral) -> None:

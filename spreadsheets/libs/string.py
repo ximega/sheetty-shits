@@ -17,7 +17,7 @@ class String:
     __slots__ = ['__value', '__creation_time', '__id']
     __last_id = 0
 
-    def __new__(cls, *args, **kwargs) -> Self:
+    def __new__(cls, value: str) -> Self:
         cls.__last_id += 1
         return super().__new__(cls)
 

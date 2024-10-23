@@ -1,14 +1,15 @@
+# type: ignore
 """
 Adds functionality for debugging libraries
 """
 
 
 __all__ = [
-    '_Debugger',
+    'Debugger',
 ]
 
 
-class _Debugger:
+class Debugger:
     """
     Class that allows to create an instance of debug object inside other libraries for debugging
 

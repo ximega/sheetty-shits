@@ -10,10 +10,10 @@ __all__ = [
 
 
 import datetime
-from typing import Self
+from typing import Any, Self
 from .string import String
 from .integer import Integer
-from .debug import _Debugger
+from .debug import Debugger
 
 
 type _LiteralTypes = type[String] | type[Integer]
@@ -23,7 +23,7 @@ class Array:
     __slots__ = ['__type', '__values', '__creation_time', '__id', 'debugger']
     __last_id = 0
 
-    def __new__(cls, *args, **kwargs) -> Self:
+    def __new__(cls, *args: Any, **kwargs: Any) -> Self:
         cls.__last_id += 1
         return super().__new__(cls)
 
@@ -32,7 +32,7 @@ class Array:
         self.__values = values
         self.__creation_time = datetime.datetime.now()
         self.__id = self.__last_id
-        self.debugger = _Debugger(self)
+        self.debugger = Debugger(self)
 
     def values(self) -> list[String | Integer]:
         return self.__values
