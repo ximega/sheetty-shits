@@ -331,7 +331,7 @@ class Spreadsheets:
 
         # rest of the rows
         T_H_ROW = H_ROW[0:5] + V_S_SEP.strip() + H_ROW[6:] # changing "+" cross-section to "||" for rows
-        
+
         for row in range(1, max_row+1):
             row_rest_space: int = max_row_len - len(str(row))
 

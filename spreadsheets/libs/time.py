@@ -16,8 +16,13 @@ __all__ = [
 
 
 
-from typing import Self
-from enum import Enum, auto
+from typing import Literal, Self
+from ..base.rules import (
+    DfTime,
+    DfDate, DfDateMonth, DfDateYear,
+    DfPreciseTime,
+    DfDateTime, RegDateTime,
+)
 
 type PositiveNumber = int
 
@@ -26,18 +31,12 @@ def _inclusive_range(start: int, stop: int) -> range:
     return range(start, stop+1)
 
 
-class DfTime(Enum):
-    H24 = auto()
-    H12 = auto()
-    FSTR = auto()
-    STR = auto()
-
 class Time:
     """
     The type represents time in a format: H:m
     """
 
-    __slots__ = [
+    __slots__: list[str] = [
         '__id',
         'h', 'm',
         '__display_format',
@@ -62,11 +61,11 @@ class Time:
         return super().__new__(cls)
 
     def __init__(self, h: PositiveNumber, m: PositiveNumber, display_format: DfTime = DfTime.H24) -> None:
-        self.__id = self.__last_id
+        self.__id: int = self.__last_id
         self.h = h
         self.m = m
-        self.__display_format = display_format
-        self.__strdata = [
+        self.__display_format: DfTime = display_format
+        self.__strdata: list[str] = [
             str(h) if h > 9 else '0' + str(h),
             str(m) if m > 9 else '0' + str(m),
         ]
@@ -76,7 +75,7 @@ class Time:
             case DfTime.H24:
                 return ":".join(self.__strdata)
             case DfTime.H12:
-                suffix = ' am' if self.h in _inclusive_range(0, 11) else ' pm'
+                suffix: Literal[' am'] | Literal[' pm'] = ' am' if self.h in _inclusive_range(0, 11) else ' pm'
 
                 # as in this format it is forbidden to have hour equal 0
                 if self.h == 0:
@@ -123,26 +122,13 @@ class Time:
 
         self.__display_format = to
 
-class DfDate(Enum):
-    DEFAULT = auto()
-    EN_US = auto()
-
-class DfDateMonth(Enum):
-    INT = auto()
-    STR = auto()
-    FSTR = auto()
-
-class DfDateYear(Enum):
-    CHAR2 = auto()
-    CHAR4 = auto()
-
 class Date:
     """
     The type represents date in a format: d:m:y | m:d:y | d Month y | Month d y
     depending on display format
     """
 
-    __slots__ = [
+    __slots__: list[str] = [
         '__id',
         'd', 'm', 'y',
         '__strdata',
@@ -150,7 +136,7 @@ class Date:
     ]
     __last_id = 0
     __current_century = 20
-    __months = [
+    __months: list[str] = [
         "January", "February", "March",
         "April", "May", "June",
         "July", "August", "September",
@@ -196,11 +182,11 @@ class Date:
             display_format: DfDate = DfDate.DEFAULT
         ) -> None:
 
-        self.__id = self.__last_id
+        self.__id: int = self.__last_id
         self.d = d
         self.m = m
         self.y = y
-        self.__strdata = [
+        self.__strdata: list[str] = [
             str(d) if d > 9 else '0' + str(d),
             str(m) if m > 9 else '0' + str(m),
             str(y),
@@ -313,7 +299,7 @@ class Date:
                 self.__strdata[2] = str(self.y)
 
     def __str__(self) -> str:
-        separator = '/' if self.__month_display_format == DfDateMonth.INT else ' '
+        separator: Literal['/'] | Literal[' '] = '/' if self.__month_display_format == DfDateMonth.INT else ' '
 
         return separator.join(self.__strdata)
 
@@ -321,18 +307,13 @@ class Date:
         return f"<Date> id: {self.__id} \
                  \nvalue: {self.__str__()}"
 
-class DfPreciseTime(Enum):
-    FSTR = auto()
-    STR = auto()
-    INT = auto()
-
 class PreciseTime:
     """An expansion to libs.time.Time type
 
     Allows to add seconds and milliseconds to time
     """
 
-    __slots__ = [
+    __slots__: list[str] = [
         '__id',
         'h', 'm', 's', 'ms',
         '__display_format',
@@ -365,13 +346,13 @@ class PreciseTime:
             display_format: DfPreciseTime = DfPreciseTime.FSTR
         ) -> None:
 
-        self.__id = self.__last_id
+        self.__id: int = self.__last_id
         self.h = h
         self.m = m
         self.s = s
-        self.ms = ms
-        self.__display_format = display_format
-        self.__strdata = [
+        self.ms: PositiveNumber | None = ms
+        self.__display_format: DfPreciseTime = display_format
+        self.__strdata: list[str] = [
             str(h),
             str(m) if m > 9 else '0' + str(m),
             str(s) if s > 9 else '0' + str(s),
@@ -401,15 +382,15 @@ class PreciseTime:
         if self.__display_format == DfPreciseTime.INT:
             return ":".join(self.__strdata)
 
-        unit_words = [('hour', 'h'), ('minute', 'm'), ('second', 's'), ('millisecond', 'ms')]
+        unit_words: list[tuple[str, str]] = [('hour', 'h'), ('minute', 'm'), ('second', 's'), ('millisecond', 'ms')]
         ret: list[str] = []
 
         for index, unit in enumerate(self.__strdata):
             if int(unit) == 0:
                 continue
 
-            unit_word = unit_words[index][0] if self.__display_format == DfPreciseTime.FSTR else unit_words[index][1]
-            suffix = 's' if int(unit) > 1 else ''
+            unit_word: str = unit_words[index][0] if self.__display_format == DfPreciseTime.FSTR else unit_words[index][1]
+            suffix: Literal['s'] | Literal[''] = 's' if int(unit) > 1 else ''
             ret.append(f"{unit} {unit_word}{suffix if self.__display_format == DfPreciseTime.FSTR else ''}")
 
         return " ".join(ret)
@@ -418,30 +399,18 @@ class PreciseTime:
         return f"<Time> id: {self.__id} \
                  \nvalue: {self.__str__()}"
 
-
-class DfDateTime(Enum):
-    FSTR = auto()
-    STR = auto()
-    INT = auto()
-    FULL_STR = auto()
-
-class RegDateTime(Enum):
-    DEFAULT = auto()
-    US = auto()
-
 class DateTime:
     """Combine two time types: time.Time and time.Date
     """
 
-    __slots__ = [
+    __slots__: list[str] = [
         '__id',
         'd', 'm', 'y', 'h', 'mn', 's', 'ms',
         '__strdata',
         '__display_format', '__region_format'
     ]
     __last_id = 0
-    __current_century = 20
-    __months = [
+    __months: list[str] = [
         "January", "February", "March",
         "April", "May", "June",
         "July", "August", "September",
@@ -503,15 +472,15 @@ class DateTime:
             display_format: DfDateTime = DfDateTime.INT, region_format: RegDateTime = RegDateTime.DEFAULT
         ) -> None:
 
-        self.__id = self.__last_id
+        self.__id: int = self.__last_id
         self.d = d
         self.m = m
         self.y = y
         self.h = h
         self.mn = mn
         self.s = s
-        self.ms = ms
-        self.__strdata = [
+        self.ms: PositiveNumber | None = ms
+        self.__strdata: list[str] = [
             str(d) if d > 9 else '0' + str(d),
             str(m) if m > 9 else '0' + str(m),
             str(y),
@@ -525,8 +494,8 @@ class DateTime:
         self.__region_format: RegDateTime = region_format
 
     def __str__(self) -> str:
-        date_separator = '/' if self.__display_format == DfDateTime.INT else ' '
-        time_separator = ':' if self.__display_format == DfDateTime.INT else ' '
+        date_separator: Literal['/'] | Literal[' '] = '/' if self.__display_format == DfDateTime.INT else ' '
+        time_separator: Literal[':'] | Literal[' '] = ':' if self.__display_format == DfDateTime.INT else ' '
 
         return date_separator.join(self.__strdata[0:3]) + ' ' + time_separator.join(self.__strdata[3:])
 
