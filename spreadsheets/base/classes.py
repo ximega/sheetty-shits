@@ -15,8 +15,11 @@ __all__ = [
 
 
 
+import sys
+import time
 from typing import Self, Literal
 from ..libs.utils import LiteralTypesExt, CellValues
+from .rules import Commands
 
 
 type PositiveInteger = int
@@ -269,7 +272,9 @@ class Spreadsheets:
         EMPTY_SPACE = ' '
         V_SEP = ' | '
         V_S_SEP = ' ‖ '
-        V_SEP_SIDE_SPACE = 2 # two empty chars from each side (left and right)
+        # two empty chars from each side (left and right).
+        # This also equals len(str(V_SEP)) - len(str(V_SEP.strip()))
+        V_SEP_SIDE_SPACE = 2
         H_SEP = '-'
         H_S_SEP = '='
         X_SEP = '+'
@@ -362,10 +367,107 @@ class Spreadsheets:
 
         print(parts[0] + (T_H_ROW + NEW_LINE).join(parts[1:]))
 
+    def __raise_empty_arg_error(self, *args: str | list[str] | range) -> None:
+        raise ValueError(f"{args[1]} must be empty at {args[0]} command")
+
+    def __check_allowed_args(self, command: Commands, **kwargs: str | list[str] | int) -> None:
+        if kwargs['name'] == command['name']:
+            for key, arg in kwargs.items():
+                if key == 'params':
+                    continue
+                
+                cmd_value: str | list[str] | range = command[key]
+
+                if isinstance(arg, str) and isinstance(cmd_value, str):
+                    if arg not in cmd_value:
+                        self.__raise_empty_arg_error(command['name'], key)
+                if isinstance(arg, list) and isinstance(cmd_value, list):
+                    if len(set(arg)) - len(set(cmd_value)) > 0:
+                        self.__raise_empty_arg_error(command['name'], key)
+
+
+    def __ask_input_command(self) -> tuple[str, list[str], list[str], list[str], dict[str, str | list[str]]]:
+        args: list[str] = input('$: ').split(' ')
+
+        if len(args) == 0:
+            raise ValueError("No command provided")
+
+        cmd: str = args[0]
+        argc: list[str] = [] # single -
+        argv: list[str] = [] # double --
+        params: list[str] = []
+        command: Commands = Commands.Nil
+
+        try:
+            command: Commands = getattr(Commands, cmd[0].capitalize() + cmd[1:])
+        except AttributeError as exc:
+            raise ValueError(f"Unknown command: {cmd}") from exc
+
+        if len(args) > 1:
+            for arg in args[1:]:
+                if arg[0] == '-' and arg[1] != '-':
+                    argcs: str | list[str] | range = command['argc']
+                    if not isinstance(argcs, list):
+                        raise ValueError("command['argc'] must be a list")
+                    if arg not in argcs:
+                        raise ValueError(f"Unrecognized argc: {arg}")
+                    argc.extend(list(arg[1:]))
+                elif arg[0] == '-' and arg[1] == '-':
+                    argvs: str | list[str] | range = command['argv']
+                    if not isinstance(argvs, list):
+                        raise ValueError("command['argv'] must be a list")
+                    if arg not in argv:
+                        raise ValueError(f"Unrecognized argv: {arg}")
+                    argv.append(arg)
+                else:
+                    params.append(arg)
+
+            param_range: str | list[str] | range = command['param_req']
+            if not isinstance(param_range, range):
+                raise ValueError(f"{command} param requirement is not type of range()")
+
+            if len(params) not in param_range:
+                raise ValueError("The command does not meat param amount")
+
+        dargs: dict[str, str | list[str]] = {
+            'name': cmd,
+            'argc': argc,
+            'argv': argv,
+            'params': params
+        }
+
+        return (
+            cmd,
+            argc,
+            argv,
+            params,
+            dargs
+        )
+
     def run(self) -> None:
         """Runs a dynamic version of spreadsheets with a console for dynamic commands
         """
         if not self.__dynamic:
             raise PermissionError("Spreadsheets are not dynamic, can't use .run() method")
 
-        raise NotImplementedError("The run function is not yet implemented for use")
+        prev_print = str()
+
+        while True:
+            try:
+                self.printf()
+                print('\n\n' + prev_print)
+
+                cmd, argc, argv, params, dargs = self.__ask_input_command()
+
+                self.__check_allowed_args(Commands.Exit, **dargs)
+
+                prev_print = " ".join([cmd, str(argc), str(argv), str(params)])
+
+                match cmd:
+                    case Commands.Exit:
+                        print('Finishing...')
+                        time.sleep(2)
+                        sys.exit()
+
+            except ValueError as exc:
+                prev_print = exc.args[0]

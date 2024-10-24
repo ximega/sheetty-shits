@@ -7,7 +7,7 @@ sheets = Spreadsheets()
 # between() - references a range of cells
 sheets.execute(
     # so 'A-D:1' is a first line from A to D cells
-    select('A-D:1').ascending(1, step=2) # will inexecutreease the value of cell by 1 (default) or any specified value when selecting cells
+    select('A-D:1').ascending(1, step=2) # will increase the value of cell by 1 (default) or any specified value when selecting cells
 )
 
 

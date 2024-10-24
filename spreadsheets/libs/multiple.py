@@ -35,10 +35,10 @@ class Multiple:
 
     def __init__(self, multiple_type: _LiteralTypes, values: list[_CellValues]):
         self.__type = multiple_type
-        self.__current_value: _CellValues | None = None
-        self.__values = values
-        self.__creation_time = datetime.datetime.now()
-        self.__id = self.__last_id
+        self.__current_value: _CellValues | None = values[0]
+        self.__values: list[String | Integer | Array] = values
+        self.__creation_time: datetime.datetime = datetime.datetime.now()
+        self.__id: int = self.__last_id
         self.debugger = Debugger(self)
 
     def values(self) -> list[_CellValues]:
@@ -81,13 +81,13 @@ class Multiple:
             item_index (int): the index of value that want to be repositioned
             new_index (int): the index at which the item will be
         """
-        item = self.__values[item_index]
+        item: _CellValues = self.__values[item_index]
         self.__values.pop(item_index)
 
         self.__values.insert(new_index, item)
 
     def __str__(self) -> str:
-        return str(self.__current_value)
+        return '> ' + str(self.__current_value)
 
     def __repr__(self) -> str:
         return f"<Multiple<{self.__type.__name__}>> \
