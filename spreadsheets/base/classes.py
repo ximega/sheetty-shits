@@ -22,12 +22,6 @@ from ..libs.utils import LiteralTypesExt, CellValues
 type PositiveInteger = int
 type EmptyLiteral = Literal['']
 
-EMPTY_SPACE = ' '
-V_SEPARATOR = ' | '
-H_SEPARATOR = ' ― '
-NEW_LINE = '\n'
-VERTICAL_RATIO = 2.9
-
 
 class Address:
     """Representation of address in spreadsheets
@@ -144,7 +138,7 @@ class Address:
 class Cell:
     """Representation of cells
     """
-    __slots__ = ['__address', '__type', '__value']
+    __slots__ = ['__address', '__type', '__value', '__font_color', '__back_color']
 
     def __new__(cls, address: Address, cell_type: LiteralTypesExt, value: CellValues) -> Self:
         if not isinstance(value, cell_type):
@@ -272,49 +266,101 @@ class Spreadsheets:
         Returns:
             str: the formatted spreadsheets
         """
-        formatted = str()
+        EMPTY_SPACE = ' '
+        V_SEP = ' | '
+        V_S_SEP = ' ‖ '
+        V_SEP_SIDE_SPACE = 2 # two empty chars from each side (left and right)
+        H_SEP = '-'
+        H_S_SEP = '='
+        X_SEP = '+'
+        NEW_LINE = '\n'
+
+        parts: list[str] = []
 
         max_col: str = self.__corner_address().col
         max_row: int = self.__corner_address().row
 
-        row_len: int = len(str(max_row))
+        max_row_len: int = len(str(max_row))
 
-        cols = Address.iterate_cols_until(max_col)
+        cols: list[str] = Address.iterate_cols_until(max_col)
 
+        if len(cols) == 0:
+            raise ValueError("The spreadsheets are empty, nothing to show")
 
-        # first line with columns
-        formatted += EMPTY_SPACE*row_len
+        H_ROW: str = EMPTY_SPACE \
+                     + X_SEP + H_SEP*(max_row_len+V_SEP_SIDE_SPACE) \
+                     + X_SEP + X_SEP.join([H_SEP*(self.__char_width+V_SEP_SIDE_SPACE) for _ in cols]) \
+                     + X_SEP
+        H_S_ROW: str = EMPTY_SPACE \
+                       + X_SEP + H_SEP*(max_row_len+V_SEP_SIDE_SPACE) \
+                       + X_SEP + X_SEP.join([H_S_SEP*(self.__char_width+V_SEP_SIDE_SPACE) for _ in cols]) \
+                       + X_SEP
 
-        for col in cols:
-            rest_space = self.__char_width - len(col)
-            formatted += V_SEPARATOR + col + EMPTY_SPACE*rest_space
+        # first row with columns =============================================================
+        cols_formatted: list[str] = []
+        cols_formatted.append(
+            V_SEP \
+            + EMPTY_SPACE*max_row_len \
+            + V_S_SEP \
+            + str(cols[0]) + EMPTY_SPACE*(self.__char_width - len(str(cols[0]))) \
+            + V_SEP
+        )
 
-        # second (and others as well) line separators
-        v_separators = H_SEPARATOR * (int(len(formatted)/VERTICAL_RATIO))
+        for col in cols[1:]:
+            rest_space: int = self.__char_width - len(str(col))
 
-        # main values
+            if rest_space < 0:
+                cols_formatted.append(str(col)[0:self.__char_width])
+                continue
+
+            cols_formatted.append(str(col) + EMPTY_SPACE*rest_space + V_SEP)
+
+        parts.append(
+            H_ROW \
+            + NEW_LINE \
+            + ''.join(
+                [
+                    *cols_formatted
+                ]
+            ) \
+            + NEW_LINE \
+            + H_S_ROW \
+            + NEW_LINE
+        )
+        # =====================================================================================
+
+        # rest of the rows
+        T_H_ROW = H_ROW[0:5] + V_S_SEP.strip() + H_ROW[6:] # changing "+" cross-section to "||" for rows
+        
         for row in range(1, max_row+1):
-            formatted += NEW_LINE
-            formatted += v_separators
-            formatted += NEW_LINE
+            row_rest_space: int = max_row_len - len(str(row))
 
-            rest_space = row_len - len(str(row))
-            formatted += str(row) + EMPTY_SPACE*rest_space
+            local_parts: list[str] = []
 
             for col in cols:
-                address = Address(col, row, self.__limits)
-                value: Cell | Literal[''] | None = None
+                value: Literal[''] | Cell = ''
                 try:
-                    value = self.__content[address]
+                    value = self.__content[Address(col, row, self.__limits)]
                 except KeyError:
-                    value = ''
+                    pass
 
-                value_len = len(str(value))
-                rest_space = self.__char_width - value_len
+                value_rest_space: int = self.__char_width - len(str(value))
 
-                formatted += V_SEPARATOR + str(value) + EMPTY_SPACE*rest_space
+                if value_rest_space < 0:
+                    local_parts.append(str(value)[0:self.__char_width] + V_SEP)
+                    continue
 
-        print(formatted)
+                local_parts.append(str(value) + EMPTY_SPACE*value_rest_space + V_SEP)
+
+            parts.append(
+                V_SEP \
+                + str(row) + EMPTY_SPACE*row_rest_space \
+                + V_S_SEP \
+                + ''.join(local_parts)
+                + NEW_LINE \
+            )
+
+        print(parts[0] + (T_H_ROW + NEW_LINE).join(parts[1:]))
 
     def run(self) -> None:
         """Runs a dynamic version of spreadsheets with a console for dynamic commands
