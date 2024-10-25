@@ -20,6 +20,7 @@ import time
 from typing import Self, Literal, Any
 from ..libs.utils import LiteralTypesExt, CellValues
 from .rules import Commands
+from ..libs.string import String
 
 
 type PositiveInteger = int
@@ -55,7 +56,7 @@ class Address:
         return col[::-1]
 
     @classmethod
-    def __get_col_num(cls, col: str) -> int:
+    def get_col_num(cls, col: str) -> int:
         """Return order number of a column
 
         Args:
@@ -100,13 +101,44 @@ class Address:
 
         return cols_list
 
+    @classmethod
+    def split_address_str(cls, address_str: str) -> tuple[str, int]:
+        """Splits the string representation of an address into tuple, where first is col, and second is row
+        """
+        for index, char in enumerate(address_str):
+            if char.isdigit():
+                return (address_str[:index], int(address_str[index:]))
+        return ('', 0)
+
+    @classmethod
+    def is_valid_address_str(cls, address_str: str, max_address: tuple[str, int]) -> bool:
+        """Checks whether address in a format of str is valid or not. Used primarily externally
+
+        Args:
+            address_str (str): String representation of an address
+            max_address (tuple[str, int]): The corner cell in a spreadsheets. 
+                Must be provided as a tuple with [str = 'col', int = 'row']
+        """
+        col, row = cls.split_address_str(address_str)
+
+        if not cls.is_valid_col(col):
+            return False
+
+        if cls.get_col_num(col) > cls.get_col_num(max_address[0]):
+            return False
+
+        if row > max_address[1]:
+            return False
+
+        return True
+
     def __new__(cls, col: str, row: int, spreadsheets_limits: dict[str, int]) -> Self:
         instance: Self = super().__new__(cls)
 
         if not cls.is_valid_col(col):
             raise NameError(f"Can't name address {col}{row}")
 
-        if cls.__get_col_num(col) > spreadsheets_limits['col']:
+        if cls.get_col_num(col) > spreadsheets_limits['col']:
             raise NameError(f"Can't name address {col}{row}, as it is out of column limit")
 
         if row > spreadsheets_limits['row']:
@@ -124,7 +156,7 @@ class Address:
         return self.__col
     @property
     def n_col(self) -> int:
-        return self.__get_col_num(self.__col)
+        return self.get_col_num(self.__col)
     @property
     def row(self) -> int:
         return self.__row
@@ -573,7 +605,7 @@ class Spreadsheets:
                                 prev_print: str = "Second param must be an integer"
                         case Commands.Select:
                             if len(argc) > 1:
-                                prev_print: str = "Select command cannot wark with more than one argument. Only one can be provided"
+                                prev_print: str = "select command cannot wark with more than one argument. Only one can be provided"
                                 continue
 
                             if not argc:
@@ -591,9 +623,47 @@ class Spreadsheets:
                                         prev_print: str = f"The number of directions must equal one: {cmd['name']}"
                                         continue
 
+                                    address_str: str = params[0]
+
+                                    if not Address.is_valid_address_str(address_str, (self.__corner_address().col, self.__corner_address().row)):
+                                        prev_print = f"The address param at index 0 is invalid: {cmd['name']}"
+                                        continue
+
+                                    if not params[1].isdigit():
+                                        prev_print = f"The length param at index 1 is invalid and must be an integer: {cmd['name']}"
+                                        continue
+
+                                    length: int = int(params[1])
+                                    col, row = Address.split_address_str(address_str)
+                                    address = Address(col, row, self.limits_dict())
+                                    cells: list[Cell] = []
+
                                     match argv[0]: # type: ignore
                                         case 'l':
-                                            pass
+                                            end_address = Address(Address.get_col_by_num(Address.get_col_num(col) + length), row, self.limits_dict())
+
+                                            if Address.get_col_num(end_address.col) > Address.get_col_num(self.__corner_address().col):
+                                                length: int = Address.get_col_num(self.__corner_address().col) - Address.get_col_num(address.col)
+
+                                            address_col_n: int = Address.get_col_num(address.col)
+                                            for col_n in range(address_col_n, address_col_n+length+1):
+                                                cell_address = Address(
+                                                        Address.get_col_by_num(col_n),
+                                                        row,
+                                                        self.limits_dict()
+                                                    )
+                                                try:
+                                                    cells.append(self.__content[cell_address])
+                                                except KeyError:
+                                                    cells.append(
+                                                        Cell(
+                                                            cell_address,
+                                                            String,
+                                                            String('')
+                                                        )
+                                                    )
+
+                                            prev_print = ", ".join([str(cell) for cell in cells])
                                         case 'r':
                                             pass
                                         case 'u':
@@ -621,8 +691,6 @@ class Spreadsheets:
 
                                         if arg in ('u', 'd'):
                                             pass
-
-                            prev_print: str = " ".join((str(cmd), str(argc), str(argv), str(params)))
 
                         case _:
                             if cmd in Commands:
