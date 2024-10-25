@@ -44,11 +44,16 @@ class RegDateTime(Enum):
 class Commands(Enum):
     """Contains all commands that are available in dynamic mode
     """
-    Nil = auto()
     # the commands are defined as following
     # first: command name
     # second: allowed args for a command, that start with single dash (-)
     # third: allowed args for a command, that start with double dash (--)
+    Nil = { # type: ignore
+        'name': '',
+        'argc': [],
+        'argv': [],
+        'params': range(0, 1)
+    }
     Exit = { # type: ignore
         'name': 'exit',
         'argc': [],
@@ -59,7 +64,7 @@ class Commands(Enum):
         'name': 'get',
         'argc': [],
         'argv': [],
-        'param_req': range(1, 2)
+        'param_req': range(0, 1)
     }
     Col = { # type: ignore
         'name': 'col',
@@ -67,12 +72,23 @@ class Commands(Enum):
         'argv': [],
         'param_req': range(2, 3)
     }
+    Select = {
+        'name': 'select',
+        'argc': ['-1', '-2'],
+        'argv': ['--l', '--r', '--u', '--d'],
+        'param_req': range(1, 11)
+    }
 
     def __getitem__(self, name: str) -> str | list[str] | range:
         return self.value[name] # type: ignore
 
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, str):
-            raise TypeError(f"Cannot compare Commands with {other.__class__.__name__}")
+        if isinstance(other, str):
+            return self.value['name'] == other # type: ignore
+        elif isinstance(other, Commands):
+            return self.value['name'] == other.value['name'] # type: ignore
 
-        return self.value['name'] == other # type: ignore
+        raise TypeError(f"Cannot compare Commands with {other.__class__.__name__}")
+    
+    def __str__(self) -> str:
+        return self.value['name'] # type: ignore

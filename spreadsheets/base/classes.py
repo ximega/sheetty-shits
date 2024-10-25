@@ -17,7 +17,7 @@ __all__ = [
 
 import sys
 import time
-from typing import Self, Literal
+from typing import Self, Literal, Any
 from ..libs.utils import LiteralTypesExt, CellValues
 from .rules import Commands
 
@@ -68,7 +68,7 @@ class Address:
         for char in col:
             col_num = col_num * cls.base + (ord(char) - ord('A') + 1)
         return col_num
-    
+
     @classmethod
     def is_valid_col(cls, col:  str) -> bool:
         for char in col:
@@ -465,7 +465,7 @@ class Spreadsheets:
                         self.__raise_empty_arg_error(command['name'], key)
 
 
-    def __ask_input_command(self) -> tuple[str, list[str], list[str], list[str], dict[str, str | list[str]]]:
+    def __ask_input_command(self) -> tuple[Commands, list[str], list[str], list[str], dict[str, str | list[str]]]:
         args: list[str] = input('$: ').split(' ')
 
         if len(args) == 0:
@@ -481,6 +481,8 @@ class Spreadsheets:
             command: Commands = getattr(Commands, cmd[0].capitalize() + cmd[1:])
         except AttributeError as exc:
             raise ValueError(f"Unknown command: {cmd}") from exc
+        except IndexError:
+            return (Commands.Nil, [], [], [], {'name': '', 'argc': [], 'argv': [], 'params': []})
 
         if len(args) > 1:
             for arg in args[1:]:
@@ -495,9 +497,9 @@ class Spreadsheets:
                     argvs: str | list[str] | range = command['argv']
                     if not isinstance(argvs, list):
                         raise ValueError("command['argv'] must be a list")
-                    if arg not in argv:
+                    if arg not in argvs:
                         raise ValueError(f"Unrecognized argv: {arg}")
-                    argv.append(arg)
+                    argv.append(arg[2:])
                 else:
                     params.append(arg)
 
@@ -516,7 +518,7 @@ class Spreadsheets:
         }
 
         return (
-            cmd,
+            command,
             argc,
             argv,
             params,
@@ -535,6 +537,7 @@ class Spreadsheets:
             raise PermissionError("Spreadsheets are not dynamic, can't use .run() method")
 
         prev_print: str = str()
+        prev_params: dict[str, Any] = {}
 
         try:
             while True:
@@ -547,6 +550,8 @@ class Spreadsheets:
                     self.__check_allowed_args(Commands.Exit, **dargs)
 
                     match cmd:
+                        case Commands.Nil:
+                            prev_print: str = "Cannot have an empty command"
                         case Commands.Exit:
                             print('Finishing...')
                             time.sleep(2)
@@ -566,6 +571,65 @@ class Spreadsheets:
                                 prev_print: str = f"Width for column {params[0]} set to {width} chars"
                             except ValueError:
                                 prev_print: str = "Second param must be an integer"
+                        case Commands.Select:
+                            if len(argc) > 1:
+                                prev_print: str = "Select command cannot wark with more than one argument. Only one can be provided"
+                                continue
+
+                            if not argc:
+                                # if argc is empty, then selects each one by one
+                                continue
+
+                            match argc[0]: # type: ignore
+                                case '1':
+                                    # -1
+                                    if len(params) > 2:
+                                        prev_print: str = f"Cannot have more than two params in '-1' mode: {cmd['name']}"
+                                        continue
+
+                                    if len(argv) != 1:
+                                        prev_print: str = f"The number of directions must equal one: {cmd['name']}"
+                                        continue
+
+                                    match argv[0]: # type: ignore
+                                        case 'l':
+                                            pass
+                                        case 'r':
+                                            pass
+                                        case 'u':
+                                            pass
+                                        case 'd':
+                                            pass
+
+                                case '2':
+                                    # -2
+                                    if len(params) > 2:
+                                        prev_print: str = f"Cannot have more than two params in '-2' mode: {cmd['name']}"
+                                        continue
+
+                                    if len(argv) != 2:
+                                        prev_print: str = f"The number of directions must equal two: {cmd['name']}"
+                                        continue
+
+                                    directions: dict[str, None | str] = {'x': None, 'y': None}
+                                    for arg in argv:
+                                        if (directions['x'] is not None) or (directions['y'] is not None):
+                                            prev_print: str = f"Cannot have two direction in one axis: {cmd}"
+
+                                        if arg in ('l', 'r'):
+                                            pass
+
+                                        if arg in ('u', 'd'):
+                                            pass
+
+                            prev_print: str = " ".join((str(cmd), str(argc), str(argv), str(params)))
+
+                        case _:
+                            if cmd in Commands:
+                                prev_print: str = f"Not implemented command: {cmd['name']}"
+                                continue
+
+                            prev_print: str = f"Unknown command: {cmd['name']}"
 
                 except ValueError as exc:
                     prev_print = exc.args[0]
