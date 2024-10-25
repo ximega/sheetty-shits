@@ -68,6 +68,13 @@ class Address:
         for char in col:
             col_num = col_num * cls.base + (ord(char) - ord('A') + 1)
         return col_num
+    
+    @classmethod
+    def is_valid_col(cls, col:  str) -> bool:
+        for char in col:
+            if char not in cls.valid_chars:
+                return False
+        return True
 
     @classmethod
     def iterate_cols_until(cls, stop_col: str | int) -> list[str]:
@@ -94,11 +101,10 @@ class Address:
         return cols_list
 
     def __new__(cls, col: str, row: int, spreadsheets_limits: dict[str, int]) -> Self:
-        instance = super().__new__(cls)
+        instance: Self = super().__new__(cls)
 
-        for char in col:
-            if char not in cls.valid_chars:
-                raise NameError(f"Can't name address {col}{row}")
+        if not cls.is_valid_col(col):
+            raise NameError(f"Can't name address {col}{row}")
 
         if cls.__get_col_num(col) > spreadsheets_limits['col']:
             raise NameError(f"Can't name address {col}{row}, as it is out of column limit")
@@ -109,9 +115,9 @@ class Address:
         return instance
 
     def __init__(self, col: str, row: int, spreadsheets_limits: dict[str, int]) -> None:
-        self.__col = col
-        self.__row = row
-        self.__value = f"{col}{row}"
+        self.__col: str = col
+        self.__row: int = row
+        self.__value: str = f"{col}{row}"
 
     @property
     def col(self) -> str:
@@ -187,7 +193,13 @@ class Spreadsheets:
     """
     Class for instantiating a new spreadsheets table
     """
-    __slots__ = ['__dynamic', '__char_width', '__limits', '__content', '__max_address']
+    __slots__ = [
+        '__dynamic',
+        '__char_width', '__cols_width',
+        '__limits',
+        '__content',
+        '__max_address'
+    ]
 
     def __new__(cls, *,
             dynamic: bool = False,
@@ -210,6 +222,7 @@ class Spreadsheets:
         self.__limits: dict[str, int] = {'col': col_max, 'row': row_max}
         self.__content: dict[Address, Cell] = {}
         self.__max_address: Address | None = None
+        self.__cols_width: dict[str, int] = {}
 
     def limits_dict(self) -> dict[str, int]:
         """Returns limits as a dict
@@ -247,6 +260,15 @@ class Spreadsheets:
         elif (address.n_col < self.__max_address.n_col) and (address.row > self.__max_address.row):
             self.__max_address = Address(self.__max_address.col, address.row, self.__limits)
 
+    def resize(self, name: str, new_value: int) -> None:
+        """Changes the char width of the spreadsheets
+
+        Args:
+            name (str): the column name
+            new_value (int): the value to be set
+        """
+        self.__cols_width[name] = new_value
+
     def add(self, cell: Cell) -> None:
         """Adds an object to the contents of a spreadsheets
 
@@ -263,6 +285,52 @@ class Spreadsheets:
 
         self.__try_settings_new_max_cell(cell.address)
 
+    def __make_rows(self) -> tuple[str, str]:
+        EMPTY_SPACE = ' '
+        # two empty chars from each side (left and right).
+        # This also equals len(str(V_SEP)) - len(str(V_SEP.strip()))
+        V_SEP_SIDE_SPACE = 2
+        H_SEP = '-'
+        H_S_SEP = '='
+        X_SEP = '+'
+
+        max_col: str = self.__corner_address().col
+        max_row: int = self.__corner_address().row
+
+        max_row_len: int = len(str(max_row))
+
+        cols: list[str] = Address.iterate_cols_until(max_col)
+
+        h_cols: list[str] = []
+        for col in cols:
+            number_of_dashes: int = self.__char_width + V_SEP_SIDE_SPACE
+            try:
+                number_of_dashes: int = self.__cols_width[col] + V_SEP_SIDE_SPACE
+            except KeyError:
+                pass
+            h_cols.append(H_SEP * number_of_dashes)
+
+        H_ROW: str = EMPTY_SPACE \
+                     + X_SEP + H_SEP*(max_row_len+V_SEP_SIDE_SPACE) \
+                     + X_SEP + X_SEP.join(h_cols) \
+                     + X_SEP
+
+        h_s_cols: list[str] = []
+        for col in cols:
+            number_of_dashes: int = self.__char_width + V_SEP_SIDE_SPACE
+            try:
+                number_of_dashes: int = self.__cols_width[col] + V_SEP_SIDE_SPACE
+            except KeyError:
+                pass
+            h_s_cols.append(H_S_SEP * number_of_dashes)
+
+        H_S_ROW: str = EMPTY_SPACE \
+                       + X_SEP + H_SEP*(max_row_len+V_SEP_SIDE_SPACE) \
+                       + X_SEP + X_SEP.join(h_s_cols) \
+                       + X_SEP
+
+        return (H_ROW, H_S_ROW)
+
     def printf(self) -> None:
         """Formats and prints spreadsheets to a console
 
@@ -272,12 +340,6 @@ class Spreadsheets:
         EMPTY_SPACE = ' '
         V_SEP = ' | '
         V_S_SEP = ' ‖ '
-        # two empty chars from each side (left and right).
-        # This also equals len(str(V_SEP)) - len(str(V_SEP.strip()))
-        V_SEP_SIDE_SPACE = 2
-        H_SEP = '-'
-        H_S_SEP = '='
-        X_SEP = '+'
         NEW_LINE = '\n'
 
         parts: list[str] = []
@@ -292,30 +354,38 @@ class Spreadsheets:
         if len(cols) == 0:
             raise ValueError("The spreadsheets are empty, nothing to show")
 
-        H_ROW: str = EMPTY_SPACE \
-                     + X_SEP + H_SEP*(max_row_len+V_SEP_SIDE_SPACE) \
-                     + X_SEP + X_SEP.join([H_SEP*(self.__char_width+V_SEP_SIDE_SPACE) for _ in cols]) \
-                     + X_SEP
-        H_S_ROW: str = EMPTY_SPACE \
-                       + X_SEP + H_SEP*(max_row_len+V_SEP_SIDE_SPACE) \
-                       + X_SEP + X_SEP.join([H_S_SEP*(self.__char_width+V_SEP_SIDE_SPACE) for _ in cols]) \
-                       + X_SEP
+        H_ROW, H_S_ROW = self.__make_rows()
 
         # first row with columns =============================================================
+        a_col_rest_space: int = self.__char_width - len(str(cols[0]))
+        try:
+            a_col_rest_space: int = self.__cols_width[cols[0]] - len(str(cols[0]))
+        except KeyError:
+            pass
+
         cols_formatted: list[str] = []
         cols_formatted.append(
             V_SEP \
             + EMPTY_SPACE*max_row_len \
             + V_S_SEP \
-            + str(cols[0]) + EMPTY_SPACE*(self.__char_width - len(str(cols[0]))) \
+            + str(cols[0]) + EMPTY_SPACE*(a_col_rest_space) \
             + V_SEP
         )
 
         for col in cols[1:]:
             rest_space: int = self.__char_width - len(str(col))
+            try:
+                rest_space: int = self.__cols_width[col] - len(str(col))
+            except KeyError:
+                pass
 
             if rest_space < 0:
-                cols_formatted.append(str(col)[0:self.__char_width])
+                max_width: int = self.__char_width
+                try:
+                    max_width: int = self.__cols_width[col]
+                except KeyError:
+                    pass
+                cols_formatted.append(str(col)[0:max_width])
                 continue
 
             cols_formatted.append(str(col) + EMPTY_SPACE*rest_space + V_SEP)
@@ -350,9 +420,18 @@ class Spreadsheets:
                     pass
 
                 value_rest_space: int = self.__char_width - len(str(value))
+                try:
+                    value_rest_space: int = self.__cols_width[col] - len(str(value))
+                except KeyError:
+                    pass
 
                 if value_rest_space < 0:
-                    local_parts.append(str(value)[0:self.__char_width] + V_SEP)
+                    max_width: int = self.__char_width
+                    try:
+                        max_width: int = self.__cols_width[col]
+                    except KeyError:
+                        pass
+                    local_parts.append(str(value)[0:max_width] + V_SEP)
                     continue
 
                 local_parts.append(str(value) + EMPTY_SPACE*value_rest_space + V_SEP)
@@ -375,7 +454,7 @@ class Spreadsheets:
             for key, arg in kwargs.items():
                 if key == 'params':
                     continue
-                
+
                 cmd_value: str | list[str] | range = command[key]
 
                 if isinstance(arg, str) and isinstance(cmd_value, str):
@@ -444,30 +523,51 @@ class Spreadsheets:
             dargs
         )
 
+    def __check_is_command(self, params: list[str]) -> None:
+        for param in params:
+            if param in Commands:
+                raise ValueError(f"Parameter cannot equal a command name: {param}")
+
     def run(self) -> None:
         """Runs a dynamic version of spreadsheets with a console for dynamic commands
         """
         if not self.__dynamic:
             raise PermissionError("Spreadsheets are not dynamic, can't use .run() method")
 
-        prev_print = str()
+        prev_print: str = str()
 
-        while True:
-            try:
-                self.printf()
-                print('\n\n' + prev_print)
+        try:
+            while True:
+                try:
+                    self.printf()
+                    print('\n\n' + prev_print)
 
-                cmd, argc, argv, params, dargs = self.__ask_input_command()
+                    cmd, argc, argv, params, dargs = self.__ask_input_command()
 
-                self.__check_allowed_args(Commands.Exit, **dargs)
+                    self.__check_allowed_args(Commands.Exit, **dargs)
 
-                prev_print = " ".join([cmd, str(argc), str(argv), str(params)])
+                    match cmd:
+                        case Commands.Exit:
+                            print('Finishing...')
+                            time.sleep(2)
+                            sys.exit()
+                        case Commands.Col:
+                            self.__check_is_command(params)
 
-                match cmd:
-                    case Commands.Exit:
-                        print('Finishing...')
-                        time.sleep(2)
-                        sys.exit()
+                            if not Address.is_valid_col(params[0]):
+                                prev_print: str = "First param must be column"
+                                continue
 
-            except ValueError as exc:
-                prev_print = exc.args[0]
+                            try:
+                                width: int = int(params[1])
+
+                                self.resize(params[0], width)
+
+                                prev_print: str = f"Width for column {params[0]} set to {width} chars"
+                            except ValueError:
+                                prev_print: str = "Second param must be an integer"
+
+                except ValueError as exc:
+                    prev_print = exc.args[0]
+        except (EOFError, KeyboardInterrupt):
+            print("\nProcess finished")

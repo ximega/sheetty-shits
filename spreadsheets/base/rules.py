@@ -61,6 +61,12 @@ class Commands(Enum):
         'argv': [],
         'param_req': range(1, 2)
     }
+    Col = { # type: ignore
+        'name': 'col',
+        'argc': [],
+        'argv': [],
+        'param_req': range(2, 3)
+    }
 
     def __getitem__(self, name: str) -> str | list[str] | range:
         return self.value[name] # type: ignore
