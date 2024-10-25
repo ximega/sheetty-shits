@@ -251,13 +251,13 @@ class Spreadsheets:
             self.__max_address = address
             return
 
-        if (address.n_col > self.__max_address.n_col) and (address.row > self.__max_address.row):
+        if (address.n_col >= self.__max_address.n_col) and (address.row >= self.__max_address.row):
             self.__max_address = address
             return
-        elif (address.n_col > self.__max_address.n_col) and (address.row < self.__max_address.row):
+        elif (address.n_col >= self.__max_address.n_col) and (address.row <= self.__max_address.row):
             self.__max_address = Address(Address.get_col_by_num(address.n_col), self.__max_address.row, self.__limits)
             return
-        elif (address.n_col < self.__max_address.n_col) and (address.row > self.__max_address.row):
+        elif (address.n_col <= self.__max_address.n_col) and (address.row >= self.__max_address.row):
             self.__max_address = Address(self.__max_address.col, address.row, self.__limits)
 
     def resize(self, name: str, new_value: int) -> None:

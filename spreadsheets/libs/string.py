@@ -22,9 +22,9 @@ class String:
         return super().__new__(cls)
 
     def __init__(self, value: str):
-        self.__value = value
-        self.__creation_time = datetime.datetime.now()
-        self.__id = self.__last_id
+        self.__value: str = value
+        self.__creation_time: datetime.datetime = datetime.datetime.now()
+        self.__id: int = self.__last_id
 
     def __str__(self) -> str:
         return self.__value
