@@ -581,6 +581,14 @@ class Spreadsheets:
 
                     self.__check_allowed_args(Commands.Exit, **dargs)
 
+                    try:
+                        selected_cells = prev_params['selected_cells']
+
+                        if cmd not in (Commands.Get): # NOTE: add other command that use Commands.Select
+                            prev_print = f"Cannot use {cmd['name']} following select. Please use deselect to use {cmd['name']}"
+                    except KeyError:
+                        pass
+
                     match cmd:
                         case Commands.Nil:
                             prev_print: str = "Cannot have an empty command"
@@ -605,7 +613,7 @@ class Spreadsheets:
                                 prev_print: str = "Second param must be an integer"
                         case Commands.Select:
                             if len(argc) > 1:
-                                prev_print: str = "select command cannot wark with more than one argument. Only one can be provided"
+                                prev_print: str = "Select command cannot wark with more than one argument. Only one can be provided"
                                 continue
 
                             if not argc:
@@ -647,23 +655,17 @@ class Spreadsheets:
 
                                             address_col_n: int = Address.get_col_num(address.col)
                                             for col_n in range(address_col_n, address_col_n+length+1):
-                                                cell_address = Address(
+                                                try:
+                                                    cells.append(self.__content[Address(
                                                         Address.get_col_by_num(col_n),
                                                         row,
                                                         self.limits_dict()
-                                                    )
-                                                try:
-                                                    cells.append(self.__content[cell_address])
+                                                    )])
                                                 except KeyError:
-                                                    cells.append(
-                                                        Cell(
-                                                            cell_address,
-                                                            String,
-                                                            String('')
-                                                        )
-                                                    )
+                                                    pass
 
-                                            prev_print = ", ".join([str(cell) for cell in cells])
+                                            prev_print = ", ".join([str(cell.address) for cell in cells])
+                                            prev_params['selected_cells'] = cells
                                         case 'r':
                                             pass
                                         case 'u':
@@ -692,7 +694,18 @@ class Spreadsheets:
                                         if arg in ('u', 'd'):
                                             pass
 
-                        case _:
+                        case Commands.Get:
+                            try:
+                                prev_print: str = ", ".join([str(cell.value()) for cell in prev_params['selected_cells']]) # type: ignore
+                            except KeyError:
+                                prev_print: str = f"Must select at least one cell before using: {cmd['name']}"
+                        case Commands.Deselect:
+                            try:
+                                prev_print = f"Deselected {len(prev_params['selected_cells'])} cells: {cmd['name']}"
+                                del prev_params['selected_cells']
+                            except KeyError:
+                                prev_print = f"Nothing to deselect: {cmd['name']}"
+                        case _: # type: ignore
                             if cmd in Commands:
                                 prev_print: str = f"Not implemented command: {cmd['name']}"
                                 continue

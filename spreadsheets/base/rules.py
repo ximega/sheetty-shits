@@ -78,6 +78,12 @@ class Commands(Enum):
         'argv': ['--l', '--r', '--u', '--d'],
         'param_req': range(1, 11)
     }
+    Deselect = { # type: ignore
+        'name': 'deselect',
+        'argc': [],
+        'argv': [],
+        'param_req': range(0, 1)
+    }
 
     def __getitem__(self, name: str) -> str | list[str] | range:
         return self.value[name] # type: ignore
