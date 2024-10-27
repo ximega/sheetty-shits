@@ -39,3 +39,7 @@ type TimeLiteralTypes = type[Time] | type[Date] | type[PreciseTime] | type[DateT
 
 def extract_time(time: CustomTime, format: TimeFormat, type_to: TimeLiteralTypes) -> TimeTypes:
     ...
+
+def void(anything: object) -> None: # type: ignore
+    """Literally does nothing, so that pylance does not complain"""
+    return

@@ -8,4 +8,4 @@ __all__ = [
 ]
 
 
-from .classes import Spreadsheets
+from .main import Spreadsheets

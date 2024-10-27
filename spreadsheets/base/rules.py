@@ -95,6 +95,23 @@ class Commands(Enum):
             return self.value['name'] == other.value['name'] # type: ignore
 
         raise TypeError(f"Cannot compare Commands with {other.__class__.__name__}")
-    
+
     def __str__(self) -> str:
         return self.value['name'] # type: ignore
+
+class ExecutionCommands(Enum):
+    Select = auto
+
+class SelectFormats(Enum):
+    Nil = auto()
+    ZeroDim = auto()
+    OneDim = auto()
+    TwoDim = auto()
+    Line = auto()
+    Rectangle = auto()
+
+class SelectDirection(Enum):
+    Left = auto()
+    Right = auto()
+    Up = auto()
+    Down = auto()
