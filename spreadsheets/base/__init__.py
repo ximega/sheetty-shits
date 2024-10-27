@@ -5,7 +5,10 @@ spreadsheets.base provides basic classes and constructors to handle basic operat
 
 __all__ = [
     'Spreadsheets',
+    'cells',
+    'rules',
 ]
 
 
 from .main import Spreadsheets
+from . import cells, rules

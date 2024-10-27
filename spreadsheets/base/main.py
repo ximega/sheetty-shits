@@ -8,9 +8,9 @@ import sys
 import time
 from typing import Self, Literal, Any
 from .classes import Cell, Address
-from .cells import CellManager
-from .rules import Commands
-from ..libs.utils import void
+from .cells import Executable
+from .rules import Commands, ExecutableInstructions
+from ..libs.utils import void, CellValues
 
 
 type PositiveInteger = int
@@ -113,9 +113,26 @@ class Spreadsheets:
 
         self.__try_settings_new_max_cell(cell.address)
 
-    def execute(self, manager: CellManager) -> None:
+    def __execute_filling(self, dct: dict[str, CellValues]) -> None:
+        for address_str, value in dct.items():
+            col, row = Address.split_address_str(address_str)
+            address = Address(col, row, self.limits_dict())
+            try:
+                self.add(Cell(
+                    address,
+                    value.__class__,
+                    value
+                ))
+            except KeyError:
+                pass
+        print(self.__content)
+
+    def execute(self, executable: Executable) -> None:
         """Executes a command over CellManager and changes the contents of a spreadsheets
         """
+        match executable.instruction:
+            case ExecutableInstructions.Fill:
+                self.__execute_filling(executable.kwargs['content'])
 
     def __make_rows(self) -> tuple[str, str]:
         EMPTY_SPACE = ' '

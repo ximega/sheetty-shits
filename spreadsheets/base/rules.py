@@ -115,3 +115,6 @@ class SelectDirection(Enum):
     Right = auto()
     Up = auto()
     Down = auto()
+
+class ExecutableInstructions(Enum):
+    Fill = auto()

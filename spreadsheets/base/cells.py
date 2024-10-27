@@ -5,14 +5,23 @@
 
 __all__= [
     'select',
-    'CellManager',
+    'Executable'
 ]
 
 
-from typing import Self
+from typing import Self, Any
+from ..libs.utils import CellValues
+from ..libs.integer import Integer
 from .classes import Address
-from .rules import SelectFormats, SelectDirection, ExecutionCommands
+from .rules import SelectFormats, SelectDirection, ExecutionCommands, ExecutableInstructions
 
+
+class Executable:
+    """Cooked executable instructions for the execute method in a spreadsheets
+    """
+    def __init__(self, instruction: ExecutableInstructions, **kwargs: Any) -> None:
+        self.instruction: ExecutableInstructions = instruction
+        self.kwargs: dict[str, Any] = kwargs
 
 class CellManager:
     """Manages cells and contains a list of them
@@ -24,14 +33,8 @@ class CellManager:
         'select_mode',
         'command_from'
     ]
-
-    def __new__(cls) -> Self:
-        return super().__new__(cls)
-
-    def __init__(self) -> None:
-        return
     
-    def set_selection(self, addresses_str: str | list[str] | tuple[str, int, SelectDirection | tuple[SelectDirection, SelectDirection]], select_format: SelectFormats) -> Self:
+    def set_selection(self, addresses_str: list[str], select_format: SelectFormats) -> Self:
         """A list of addresses from select command
         """
         self.command_from = ExecutionCommands.Select
@@ -45,8 +48,46 @@ class CellManager:
             return f"<CellManager command: {self.command_from}>"
         except AttributeError:
             return "<CellManager empty>"
+        
+    def fill(self, *values: CellValues) -> Executable:
+        """Fills the selected area
+        """
+        if self.command_from != ExecutionCommands.Select:
+            raise TypeError("Cannot fill values, as the selection was not applied beforehand")
+        
+        if len(values) != len(self.addresses_str):
+            raise ValueError("The number of values that fill the addresses cannot be lower or higher than of the number of addresses")
+        
+        dct: dict[str, CellValues] = {}
+        for index, value in enumerate(values):
+            dct[self.addresses_str[index]] = value
+        return Executable(
+            ExecutableInstructions.Fill,
+            content = dct
+        )
+    
+    def ascending_int(self, *, start: int, step: int, stop: int | None = None) -> Executable:
+        """Increases the value of the cell starting at 'start' 
+        and increasing value by 'step' at each operation
+        until it reaches stop, the value of stop will be included as well
+        """
+        if self.command_from != ExecutionCommands.Select:
+            raise TypeError("Cannot fill values, as the selection was not applied beforehand")
+        
+        dct: dict[str, CellValues] = {}
 
-def select(address_range: str, /, direction: SelectDirection | tuple[SelectDirection, SelectDirection] | None = None, number: int | None = 0) -> CellManager:
+        for index, address_str in enumerate(self.addresses_str):
+            value: int = start + step*index
+            if (stop is not None) and (stop <= value):
+                break
+            dct[address_str] = Integer(value)
+
+        return Executable(
+            ExecutableInstructions.Fill,
+            content = dct
+        )
+
+def select(address_range: str, /, direction: SelectDirection | tuple[SelectDirection, SelectDirection] | None = None, number: int | None = None) -> CellManager:
     """Select a singe or list of cells and allows managing over it
 
     Args:
@@ -90,17 +131,15 @@ def select(address_range: str, /, direction: SelectDirection | tuple[SelectDirec
 
             if DASH in first_part and DASH in second_part:
                 select_format: SelectFormats = SelectFormats.TwoDim
-            else:
+            elif DASH in first_part or DASH in second_part:
                 select_format: SelectFormats = SelectFormats.OneDim
-
-
-        if Address.is_valid_address_str(address_range, None):
-            select_format: SelectFormats = SelectFormats.ZeroDim
+            elif Address.is_valid_address_str(address_range, None):
+                select_format: SelectFormats = SelectFormats.ZeroDim
 
         match select_format:
             case SelectFormats.ZeroDim:
                 return CellManager().set_selection(
-                    address_range,
+                    [address_range],
                     select_format
                 )
             case SelectFormats.OneDim:
@@ -143,8 +182,6 @@ def select(address_range: str, /, direction: SelectDirection | tuple[SelectDirec
         
         if isinstance(direction, tuple):
             select_format: SelectFormats = SelectFormats.Rectangle
-
-        
         if direction in SelectDirection:
             select_format: SelectFormats = SelectFormats.Line
 
@@ -154,7 +191,33 @@ def select(address_range: str, /, direction: SelectDirection | tuple[SelectDirec
         if number is None:
             raise TypeError("number must be of type int")
         
+        addresses_str: list[str] = []
+
+        col, row = Address.split_address_str(address_range)
+        col_n = Address.get_col_num(col)
+
+        match select_format:
+            case SelectFormats.Rectangle:
+                pass
+            case SelectFormats.Line:
+                match direction:
+                    case SelectDirection.Left:
+                        for nw_col_n in range(col_n-number+2, col_n+1):
+                            addresses_str.append(f"{Address.get_col_by_num(nw_col_n)}{row}")
+                    case SelectDirection.Right:
+                        for nw_col_n in range(col_n, col_n+number+1):
+                            addresses_str.append(f"{Address.get_col_by_num(nw_col_n)}{row}")
+                    case SelectDirection.Up:
+                        for nw_row in range(row-number+2, row+1):
+                            addresses_str.append(f"{col}{nw_row}")
+                    case SelectDirection.Down:
+                        for nw_row in range(row, row+number+1):
+                            addresses_str.append(f"{col}{nw_row}")
+                    case _:
+                        raise TypeError("No other direction is available to usage")
+        
         return CellManager().set_selection(
-            (address_range, number, direction),
+            addresses_str,
             select_format
         )
+    

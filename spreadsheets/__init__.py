@@ -12,4 +12,4 @@ __all__ = [
 ]
 
 
-from .base.classes import Spreadsheets
+from .base.main import Spreadsheets
