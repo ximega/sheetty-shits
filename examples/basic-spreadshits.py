@@ -1,14 +1,22 @@
 from spreadsheets.base.cells import select
-from spreadsheets.base import Spreadsheets
+from spreadsheets.base import Spreadsheets, rules
 
-sheets = Spreadsheets()
+sheets: Spreadsheets = Spreadsheets(char_width=3).dynamic_on()
 
 # .execute() - is a command that sets value to a particular cell
 # between() - references a range of cells
 sheets.execute(
     # so 'A-D:1' is a first line from A to D cells
-    select('C-D:1-9').ascending_int(start=0, step=4) 
+    select('C-D:1-9').ascending_int(start=0, step=4, stop=52) 
     # will increase the value of cell by 1 (default) or any specified value when selecting cells
+)
+
+sheets.execute(
+    select('A-J:4').descending_int(start=20, step=1)
+)
+
+sheets.execute(
+    select('A5', (rules.SelectDirection.Right, rules.SelectDirection.Down), (2, 3)).ascending_int(start=20, step=5)
 )
 
 
@@ -19,4 +27,4 @@ sheets.execute(
 #     # Can also call by just specifying step, and it will apply to both dimensions
 # )
 
-sheets.printf()
+sheets.run()

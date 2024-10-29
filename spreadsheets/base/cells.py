@@ -28,7 +28,6 @@ class CellManager:
     """
 
     __slots__ = [
-        '__content',
         'addresses_str',
         'select_mode',
         'command_from'
@@ -37,8 +36,8 @@ class CellManager:
     def set_selection(self, addresses_str: list[str], select_format: SelectFormats) -> Self:
         """A list of addresses from select command
         """
-        self.command_from = ExecutionCommands.Select
-        self.addresses_str = addresses_str
+        self.command_from: ExecutionCommands = ExecutionCommands.Select
+        self.addresses_str: list[str] = addresses_str
         self.select_mode: SelectFormats = select_format
 
         return self
@@ -71,6 +70,9 @@ class CellManager:
         and increasing value by 'step' at each operation
         until it reaches stop, the value of stop will be included as well
         """
+        if (stop is not None) and (start > stop):
+            raise ValueError("stop point cannot be lower than start")
+
         if self.command_from != ExecutionCommands.Select:
             raise TypeError("Cannot fill values, as the selection was not applied beforehand")
         
@@ -78,7 +80,31 @@ class CellManager:
 
         for index, address_str in enumerate(self.addresses_str):
             value: int = start + step*index
-            if (stop is not None) and (stop <= value):
+            if (stop is not None) and (stop < value):
+                break
+            dct[address_str] = Integer(value)
+
+        return Executable(
+            ExecutableInstructions.Fill,
+            content = dct
+        )
+    
+    def descending_int(self, *, start: int, step: int, stop: int | None = None) -> Executable:
+        """Decreases the value of the cell starting at 'start' 
+        and decreasing value by 'step' at each operation
+        until it reaches stop, the value of stop will be included as well
+        """
+        if (stop is not None) and (start < stop):
+            raise ValueError("stop point cannot be higher than start")
+        
+        if self.command_from != ExecutionCommands.Select:
+            raise TypeError("Cannot fill values, as the selection was not applied beforehand")
+
+        dct: dict[str, CellValues] = {}
+
+        for index, address_str in enumerate(self.addresses_str):
+            value: int = start - step*index
+            if (stop is not None) and (stop < value):
                 break
             dct[address_str] = Integer(value)
 
@@ -87,7 +113,12 @@ class CellManager:
             content = dct
         )
 
-def select(address_range: str, /, direction: SelectDirection | tuple[SelectDirection, SelectDirection] | None = None, number: int | None = None) -> CellManager:
+def select(
+        address_range: str, 
+        /, 
+        direction: SelectDirection | tuple[SelectDirection, SelectDirection] | None = None, 
+        number: int | tuple[int, int] | None = None
+    ) -> CellManager:
     """Select a singe or list of cells and allows managing over it
 
     Args:
@@ -180,35 +211,83 @@ def select(address_range: str, /, direction: SelectDirection | tuple[SelectDirec
         if not Address.is_valid_address_str(address_range, None):
             raise ValueError(INVALID_CELL_ERR_TEXT)
         
-        if isinstance(direction, tuple):
+        if isinstance(direction, tuple) and isinstance(number, tuple):
             select_format: SelectFormats = SelectFormats.Rectangle
-        if direction in SelectDirection:
+        elif isinstance(direction, SelectDirection) and isinstance(number, int):
             select_format: SelectFormats = SelectFormats.Line
-
-        if select_format == SelectFormats.Nil:
-            raise ValueError(INVALID_CELL_ERR_TEXT)
-        
-        if number is None:
-            raise TypeError("number must be of type int")
+        else:
+            raise TypeError("Undefined select format for a select function")
         
         addresses_str: list[str] = []
 
         col, row = Address.split_address_str(address_range)
-        col_n = Address.get_col_num(col)
+        col_n: int = Address.get_col_num(col)
 
         match select_format:
             case SelectFormats.Rectangle:
-                pass
+                if (not isinstance(direction, tuple)) or (not isinstance(number, tuple)):
+                    raise TypeError("Direction provided was identified as tuple and select format was set to rectangle")
+
+                first_dir, second_dir = direction
+
+                match first_dir:      
+                    case SelectDirection.Left:
+                        for nw_col_n in range(col_n-number[0], col_n+1):
+                            match second_dir:
+                                case SelectDirection.Up:
+                                    for nw_row in range(row-number[1], row+1):
+                                        addresses_str.append(f"{Address.get_col_by_num(nw_col_n)}{nw_row}")
+                                case SelectDirection.Down:
+                                    for nw_row in range(row, row+number[1]+1):
+                                        addresses_str.append(f"{Address.get_col_by_num(nw_col_n)}{nw_row}")
+                                case _:
+                                    raise ValueError("Cannot choose two direction in the same axis")
+                    case SelectDirection.Right:
+                        for nw_col_n in range(col_n, col_n+number[0]+1):
+                            match second_dir:
+                                case SelectDirection.Up:
+                                    for nw_row in range(row-number[1], row+1):
+                                        addresses_str.append(f"{Address.get_col_by_num(nw_col_n)}{nw_row}")
+                                case SelectDirection.Down:
+                                    for nw_row in range(row, row+number[1]+1):
+                                        addresses_str.append(f"{Address.get_col_by_num(nw_col_n)}{nw_row}")
+                                case _:
+                                    raise ValueError("Cannot choose two direction in the same axis")
+                    case SelectDirection.Up:
+                        for nw_row in range(row-number[0], row+1):
+                            match second_dir:
+                                case SelectDirection.Left:
+                                    for nw_col_n in range(col_n-number[1], col_n+1):
+                                        addresses_str.append(f"{Address.get_col_by_num(nw_col_n)}{nw_row}")
+                                case SelectDirection.Right:
+                                    for nw_col_n in range(col_n, col_n+number[1]+1):
+                                        addresses_str.append(f"{Address.get_col_by_num(nw_col_n)}{nw_row}")
+                                case _:
+                                    raise ValueError("Cannot choose two direction in the same axis")
+                    case SelectDirection.Down:
+                        for nw_row in range(row, row+number[0]+1):
+                            match second_dir:
+                                case SelectDirection.Left:
+                                    for nw_col_n in range(col_n-number[1], col_n+1):
+                                        addresses_str.append(f"{Address.get_col_by_num(nw_col_n)}{nw_row}")
+                                case SelectDirection.Right:
+                                    for nw_col_n in range(col_n, col_n+number[1]+1):
+                                        addresses_str.append(f"{Address.get_col_by_num(nw_col_n)}{nw_row}")
+                                case _:
+                                    raise ValueError("Cannot choose two direction in the same axis")
             case SelectFormats.Line:
+                if not isinstance(number, int):
+                    raise TypeError("Direction provided was identified as integer and select format was set to line")
+                
                 match direction:
                     case SelectDirection.Left:
-                        for nw_col_n in range(col_n-number+2, col_n+1):
+                        for nw_col_n in range(col_n-number, col_n+1):
                             addresses_str.append(f"{Address.get_col_by_num(nw_col_n)}{row}")
                     case SelectDirection.Right:
                         for nw_col_n in range(col_n, col_n+number+1):
                             addresses_str.append(f"{Address.get_col_by_num(nw_col_n)}{row}")
                     case SelectDirection.Up:
-                        for nw_row in range(row-number+2, row+1):
+                        for nw_row in range(row-number, row+1):
                             addresses_str.append(f"{col}{nw_row}")
                     case SelectDirection.Down:
                         for nw_row in range(row, row+number+1):

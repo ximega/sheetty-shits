@@ -8,8 +8,8 @@ import sys
 import time
 from typing import Self, Literal, Any
 from .classes import Cell, Address
-from .cells import Executable
-from .rules import Commands, ExecutableInstructions
+from .cells import Executable, select
+from .rules import Commands, ExecutableInstructions, SelectDirection
 from ..libs.utils import void, CellValues
 
 
@@ -30,7 +30,6 @@ class Spreadsheets:
     ]
 
     def __new__(cls, *,
-            dynamic: bool = False,
             char_width: PositiveInteger = 7,
             col_max: PositiveInteger = 1000,
             row_max: PositiveInteger = 1000,
@@ -39,18 +38,21 @@ class Spreadsheets:
         return super().__new__(cls)
 
     def __init__(self, *,
-            dynamic: bool = False,
             char_width: PositiveInteger = 7,
             col_max: PositiveInteger = 1000,
             row_max: PositiveInteger = 1000,
         ) -> None:
 
-        self.__dynamic: bool = dynamic
+        self.__dynamic: bool = False
         self.__char_width: PositiveInteger = char_width
         self.__limits: dict[str, int] = {'col': col_max, 'row': row_max}
         self.__content: dict[Address, Cell] = {}
         self.__max_address: Address | None = None
         self.__cols_width: dict[str, int] = {}
+
+    def dynamic_on(self) -> Self:
+        self.__dynamic = True
+        return self
 
     def limits_dict(self) -> dict[str, int]:
         """Returns limits as a dict
@@ -113,19 +115,24 @@ class Spreadsheets:
 
         self.__try_settings_new_max_cell(cell.address)
 
+    def __fadd(self, cell: Cell) -> None:
+        """A forceful version of self.add()"""
+        self.__content[cell.address] = cell
+
+        self.__try_settings_new_max_cell(cell.address)
+
     def __execute_filling(self, dct: dict[str, CellValues]) -> None:
         for address_str, value in dct.items():
             col, row = Address.split_address_str(address_str)
             address = Address(col, row, self.limits_dict())
             try:
-                self.add(Cell(
+                self.__fadd(Cell(
                     address,
                     value.__class__,
                     value
                 ))
             except KeyError:
                 pass
-        print(self.__content)
 
     def execute(self, executable: Executable) -> None:
         """Executes a command over CellManager and changes the contents of a spreadsheets
@@ -315,7 +322,7 @@ class Spreadsheets:
 
 
     def __ask_input_command(self) -> tuple[Commands, list[str], list[str], list[str], dict[str, str | list[str]]]:
-        args: list[str] = input('$: ').split(' ')
+        args: list[str] = input('$: ').strip().split(' ')
 
         if len(args) == 0:
             raise ValueError("No command provided")
@@ -378,6 +385,21 @@ class Spreadsheets:
         for param in params:
             if param in Commands:
                 raise ValueError(f"Parameter cannot equal a command name: {param}")
+            
+    def __return_cells_through_selection(self, address_str: str, direction: SelectDirection, length: int) -> tuple[list[Cell], str]:
+        cells: list[Cell] = []
+
+        for address_str_fromselect in select(address_str, direction, length).addresses_str:
+            try:
+                col_str, row_int = Address.split_address_str(address_str_fromselect)
+                cell: Cell = self.__content[Address(col_str, row_int, self.limits_dict())]
+                cells.append(cell)
+            except KeyError:
+                pass
+
+        prev_print: str = ", ".join([str(cell.address) for cell in cells])
+
+        return (cells, prev_print)
 
     def run(self) -> None:
         """Runs a dynamic version of spreadsheets with a console for dynamic commands
@@ -411,6 +433,7 @@ class Spreadsheets:
                     match cmd:
                         case Commands.Nil:
                             prev_print: str = "Cannot have an empty command"
+                            continue
                         case Commands.Exit:
                             print('Finishing...')
                             time.sleep(2)
@@ -428,8 +451,10 @@ class Spreadsheets:
                                 self.resize(params[0], width)
 
                                 prev_print: str = f"Width for column {params[0]} set to {width} chars"
+                                continue
                             except ValueError:
                                 prev_print: str = "Second param must be an integer"
+                                continue
                         case Commands.Select:
                             if len(argc) > 1:
                                 prev_print: str = "Select command cannot wark with more than one argument. Only one can be provided"
@@ -453,44 +478,32 @@ class Spreadsheets:
                                     address_str: str = params[0]
 
                                     if not Address.is_valid_address_str(address_str, (self.__corner_address().col, self.__corner_address().row)):
-                                        prev_print = f"The address param at index 0 is invalid: {cmd['name']}"
+                                        prev_print: str = f"The address param at index 0 is invalid: {cmd['name']}"
                                         continue
 
-                                    if not params[1].isdigit():
-                                        prev_print = f"The length param at index 1 is invalid and must be an integer: {cmd['name']}"
+                                    try:
+                                        if not params[1].isdigit():
+                                            prev_print: str = f"The length param at index 1 is invalid and must be an integer: {cmd['name']}"
+                                            continue
+                                    except IndexError:
+                                        prev_print: str = f"Did not receive the length param: {cmd['name']}"
                                         continue
 
                                     length: int = int(params[1])
-                                    col, row = Address.split_address_str(address_str)
-                                    address = Address(col, row, self.limits_dict())
-                                    cells: list[Cell] = []
 
                                     match argv[0]: # type: ignore
                                         case 'l':
-                                            end_address = Address(Address.get_col_by_num(Address.get_col_num(col) + length), row, self.limits_dict())
-
-                                            if Address.get_col_num(end_address.col) > Address.get_col_num(self.__corner_address().col):
-                                                length: int = Address.get_col_num(self.__corner_address().col) - Address.get_col_num(address.col)
-
-                                            address_col_n: int = Address.get_col_num(address.col)
-                                            for col_n in range(address_col_n, address_col_n+length+1):
-                                                try:
-                                                    cells.append(self.__content[Address(
-                                                        Address.get_col_by_num(col_n),
-                                                        row,
-                                                        self.limits_dict()
-                                                    )])
-                                                except KeyError:
-                                                    pass
-
-                                            prev_print = ", ".join([str(cell.address) for cell in cells])
-                                            prev_params['selected_cells'] = cells
+                                            prev_params['selected_cells'], prev_print = self.__return_cells_through_selection(address_str, SelectDirection.Left, length)
+                                            continue
                                         case 'r':
-                                            pass
+                                            prev_params['selected_cells'], prev_print = self.__return_cells_through_selection(address_str, SelectDirection.Right, length)
+                                            continue
                                         case 'u':
-                                            pass
+                                            prev_params['selected_cells'], prev_print = self.__return_cells_through_selection(address_str, SelectDirection.Up, length)
+                                            continue
                                         case 'd':
-                                            pass
+                                            prev_params['selected_cells'], prev_print = self.__return_cells_through_selection(address_str, SelectDirection.Down, length)
+                                            continue
 
                                 case '2':
                                     # -2
@@ -506,6 +519,7 @@ class Spreadsheets:
                                     for arg in argv:
                                         if (directions['x'] is not None) or (directions['y'] is not None):
                                             prev_print: str = f"Cannot have two direction in one axis: {cmd}"
+                                            continue
 
                                         if arg in ('l', 'r'):
                                             pass
@@ -516,22 +530,28 @@ class Spreadsheets:
                         case Commands.Get:
                             try:
                                 prev_print: str = ", ".join([str(cell.value()) for cell in prev_params['selected_cells']]) # type: ignore
+                                continue
                             except KeyError:
                                 prev_print: str = f"Must select at least one cell before using: {cmd['name']}"
+                                continue
                         case Commands.Deselect:
                             try:
                                 prev_print = f"Deselected {len(prev_params['selected_cells'])} cells: {cmd['name']}"
                                 del prev_params['selected_cells']
+                                continue
                             except KeyError:
                                 prev_print = f"Nothing to deselect: {cmd['name']}"
+                                continue
                         case _: # type: ignore
                             if cmd in Commands:
                                 prev_print: str = f"Not implemented command: {cmd['name']}"
                                 continue
 
                             prev_print: str = f"Unknown command: {cmd['name']}"
+                            continue
 
                 except ValueError as exc:
                     prev_print = exc.args[0]
+                    continue
         except (EOFError, KeyboardInterrupt):
             print("\nProcess finished")
