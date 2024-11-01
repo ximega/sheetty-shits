@@ -11,6 +11,7 @@ from .classes import Cell, Address
 from .cells import Executable, select
 from .rules import Commands, ExecutableInstructions, SelectDirection
 from ..libs.utils import void, CellValues
+from ..dynamic.command import Console
 
 
 type PositiveInteger = int
@@ -26,7 +27,8 @@ class Spreadsheets:
         '__char_width', '__cols_width',
         '__limits',
         '__content',
-        '__max_address'
+        '__max_address',
+        'console'
     ]
 
     def __new__(cls, *,
@@ -49,9 +51,13 @@ class Spreadsheets:
         self.__content: dict[Address, Cell] = {}
         self.__max_address: Address | None = None
         self.__cols_width: dict[str, int] = {}
+        self.console: Console = Console(self)
 
-    def dynamic_on(self) -> Self:
+    def enable_dynamic(self) -> Self:
+        """Enables to run dynamic commands in an internal console
+        """
         self.__dynamic = True
+        self.console = Console(self) # type: ignore
         return self
 
     def limits_dict(self) -> dict[str, int]:
@@ -133,6 +139,14 @@ class Spreadsheets:
                 ))
             except KeyError:
                 pass
+
+    def get(self, address: Address) -> Cell:
+        """Gets the value out of contents of a spreadsheets. Raises ValueError if nothing is found
+        """
+        try:
+            return self.__content[address]
+        except KeyError as exc:
+            raise ValueError(f"There is no object at this address: {address}") from exc
 
     def execute(self, executable: Executable) -> None:
         """Executes a command over CellManager and changes the contents of a spreadsheets

@@ -14,6 +14,7 @@ __all__ = [
 
 from typing import Self, Literal
 from ..libs.utils import LiteralTypesExt, CellValues
+from ..libs import String, Integer, Float, Array
 
 
 type PositiveInteger = int
@@ -208,6 +209,13 @@ class Cell:
 
         self.__value = new_value
 
+    def append(self, value: Integer | String | Float) -> None:
+        """Adds new value if the value is Array"""
+        if self.__type != Array:
+            raise TypeError("Method is only available for Array 's")
+        
+        self.__value.append(value) # type: ignore
+
     @property
     def address(self) -> Address:
         return self.__address
@@ -217,3 +225,8 @@ class Cell:
 
     def __repr__(self) -> str:
         return f"{self.__address}: {self.__value} of type {self.__type.__name__}"
+    
+    def type_equals(self, inp_type: LiteralTypesExt) -> bool:
+        """Checks whether the type of the cell equals the type provided
+        """
+        return self.__type == inp_type

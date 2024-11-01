@@ -9,7 +9,7 @@ dct: dict[str, list[CellValues]] = {
     'Exact value': [Float(9.81), Float(299_998_346.36422)],
 }
 
-sp: Spreadsheets = Spreadsheets(dynamic=True, char_width=15)
+sp: Spreadsheets = Spreadsheets(char_width=15).enable_dynamic()
 
 sp: Spreadsheets = Parser(sp).from_dict(dct)
 

@@ -36,8 +36,26 @@ class Array:
         self.__id: int = self.__last_id
         self.debugger = Debugger(self)
 
-    def values(self) -> list[_CellTypes]:
+    @property
+    def values(self):
         return self.__values
+    
+    def append(self, value: _CellTypes) -> None:
+        """Adds a new value to an Array"""
+        if not isinstance(value, self.__type):
+            raise TypeError(f"The value provided must be of type {self.__type.__name__}")
+        self.__values.append(value)
+
+    def remove(self, index_or_value: int | _CellTypes) -> None:
+        """Removes an element from an Array
+        """
+        if (not isinstance(index_or_value, int)) and (not isinstance(index_or_value, self.__type)):
+            raise TypeError
+
+        if isinstance(index_or_value, int):
+            self.__values.pop(index_or_value)
+        else:
+            self.__values.remove(index_or_value)
 
     def __str__(self) -> str:
         return '* ' + ", ".join([str(x) for x in self.__values])

@@ -8,7 +8,8 @@ __all__ = [
 ]
 
 
-from ..base.classes import Spreadsheets, Address, Cell
+from ..base.classes import Address, Cell
+from ..base.main import Spreadsheets
 from .utils import CellValues
 from .string import String
 

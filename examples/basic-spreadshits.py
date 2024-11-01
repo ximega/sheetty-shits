@@ -1,7 +1,7 @@
 from spreadsheets.base.cells import select
 from spreadsheets.base import Spreadsheets, rules
 
-sheets: Spreadsheets = Spreadsheets(char_width=3).dynamic_on()
+sheets: Spreadsheets = Spreadsheets(char_width=3).enable_dynamic()
 
 # .execute() - is a command that sets value to a particular cell
 # between() - references a range of cells

@@ -52,37 +52,43 @@ class Commands(Enum):
         'name': '',
         'argc': [],
         'argv': [],
-        'params': range(0, 1)
+        'params': range(0, 1),
+        'docs': 'An undefined command. Any use raises error.'
     }
     Exit = { # type: ignore
         'name': 'exit',
         'argc': [],
         'argv': [],
-        'param_req': range(0, 1)
+        'param_req': range(0, 1),
+        'docs': 'Finished a program.'
     }
     Get = { # type: ignore
         'name': 'get',
         'argc': [],
         'argv': [],
-        'param_req': range(0, 1)
+        'param_req': range(0, 1),
+        'docs': 'Prints out the values of cells.'
     }
     Col = { # type: ignore
         'name': 'col',
         'argc': [],
         'argv': [],
-        'param_req': range(2, 3)
+        'param_req': range(2, 3),
+        'docs': 'Sets a char width for each column.'
     }
     Select = {
         'name': 'select',
         'argc': ['-1', '-2'],
         'argv': ['--l', '--r', '--u', '--d'],
-        'param_req': range(1, 11)
+        'param_req': range(1, 11),
+        'docs': 'Selects a singular or a range of cells.'
     }
     Deselect = { # type: ignore
         'name': 'deselect',
         'argc': [],
         'argv': [],
-        'param_req': range(0, 1)
+        'param_req': range(0, 1),
+        'docs': 'Removes selection.'
     }
 
     def __getitem__(self, name: str) -> str | list[str] | range:
