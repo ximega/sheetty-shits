@@ -22,7 +22,7 @@ class Integer:
         return super().__new__(cls)
 
     def __init__(self, value: int) -> None:
-        self.__value = value
+        self.__value = int(value)
         self.__creation_time = datetime.datetime.now()
         self.__id = self.__last_id
 

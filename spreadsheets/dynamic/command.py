@@ -11,6 +11,8 @@ __all__ = [
 
 from typing import Any
 from collections.abc import Callable
+from .paramtypes import *
+from ..libs import Integer, Float, String, boolTrue, boolFalse
 
 
 class _CustomCommand:
@@ -18,7 +20,7 @@ class _CustomCommand:
             name: str,
             argc: set[str],
             argv: set[str],
-            param_types: list[Any],
+            param_types: list[ParamTypes],
             docs: str,
             handler: Callable[[Any, set[str], set[str], list[Any]], Any],
         ) -> None:
@@ -26,11 +28,13 @@ class _CustomCommand:
         self.name: str = name
         self.argc: set[str] = argc
         self.argv: set[str] = argv
-        self.param_types: list[Any] = param_types 
+        self.param_types: list[ParamTypes] = param_types 
         self.docs: str = docs
         self.handler = handler
 
-    def call(self, argc: set[str], argv: set[str], params: list[str]) -> str:
+    def call(self, sp: Any, argc: set[str], argv: set[str], params: list[str]) -> str:
+        # again, Any is specified as a type of sp
+        # not to cause circular import error
         """Calls a command"""
         val_argc: set[str] = argc - self.argc
         if len(val_argc) > 0:
@@ -40,10 +44,37 @@ class _CustomCommand:
             raise ValueError(f"Unknown value of 'argv': {val_argv}")
         
         for index, param in enumerate(params):
-            param_type = self.param_types[index]
+            param_type: ParamTypes = self.param_types[index]
 
-            match param_type:
+            if param.isdigit():
+                param = Integer(int(param))
+            else:
+                try:
+                    param = Float(float(param))
+                except ValueError:
+                    match param:
+                        case 'TRUE':
+                            param = boolTrue
+                        case 'FALSE':
+                            param = boolFalse
+                        case _:
+                            param = String(param)
+   
+            allow_access: bool = False
 
+            if param == AddressParam:
+                allow_access = True
+            if isinstance(param_type, _ValueTypeParam):
+                for param_type_singular in param_type.param_types:
+                    if isinstance(param, param_type_singular):
+            # NOTE: 
+            # add more handlers for checking types in the future 
+            # if any created in paramtypes.py
+
+            if not allow_access:
+                raise ValueError(f"The value of {param} is not associated with type it was given in param_types ({param_type})")
+            
+            return self.handler()
  
 class Console:
     """The class allows manipulations with a dynamic console
@@ -66,9 +97,15 @@ class Console:
     def add_handler(self, 
             name: str, 
             argc: set[str], argv: set[str], 
-            param_types: list[Any], 
+            param_types: list[ParamTypes], 
             docs: str, 
-            handler: Callable[[Any, set[str], set[str], list[Any]], Any]
+            # the first Any is actually Spreadsheets, 
+            # but trying to import it and specify as a type 
+            # would cause Circular Import Error
+            # the second is argc, third argv, the fourth are the params
+            # the ReturnType is str, as a custom command must always return some response to be printed out
+            # NOTE: this must be added to a docs btw
+            handler: Callable[[Any, set[str], set[str], list[ParamTypes]], str]
         ) -> _CustomCommand: 
 
         """Adds a custom command"""
@@ -82,6 +119,13 @@ class Console:
         return self.__commands
     
     def call(self, name: str, **kwargs: set[str] | list[str]) -> str:
+        if not isinstance(kwargs['argc'], set):
+            raise TypeError("argc must be a set, not list")
+        if not isinstance(kwargs['argv'], set):
+            raise TypeError("argv must be a set, not list")
+        if not isinstance(kwargs['params'], list):
+            raise TypeError("params must be a list, not set")
+        
         if len(kwargs) != 3:
             raise ValueError("There can be only 'argc', 'argv', and 'params' arguments to the function")
         

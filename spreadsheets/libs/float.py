@@ -24,7 +24,7 @@ class Float:
     
 
     def __init__(self, value: float) -> None:
-        self.__value = value
+        self.__value = float(value)
         self.__creation_time = datetime.datetime.now()
         self.__id = self.__last_id
 

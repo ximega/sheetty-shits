@@ -23,6 +23,7 @@ from .string import String
 from .integer import Integer
 from .array import Array
 from .float import Float
+from .boolean import boolTrue, boolFalse
 
 
 class _NullType:

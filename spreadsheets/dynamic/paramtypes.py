@@ -4,26 +4,35 @@
 
 __all__ = [
     'AddressParam',
+    '_ValueTypeParam',
     'StringParam',
     'IntegerParam',
     'FloatParam',
+    'ParamTypes',
 ]
 
 
 from typing import Self
+from ..libs import String
 
 
 from ..base.classes import Address
-class AddressParam(Address):
+from ..libs import String
+class _AddressParam:
+    def __str__(self) -> str:
+        return 'AddressParam'
+
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, str):
-            raise TypeError("Comparison for AddressParam must be between self and string")
+        if (isinstance(other, String)) and (Address.is_valid_address_str(str(other), None)):
+            return True
         
-        return f"{self.col}{self.row}" == other    
+        return False
+    
+AddressParam = _AddressParam()
 
 from ..libs import String, Integer, Float
 from ..libs.utils import LiteralTypesExt
-class ValueTypeParam:
+class _ValueTypeParam:
     def __init__(self, param_type: LiteralTypesExt) -> None:
         self.param_types: list[LiteralTypesExt] = [param_type]
 
@@ -43,6 +52,8 @@ class ValueTypeParam:
         other.param_types.extend(self.param_types)
         return self
     
-StringParam = ValueTypeParam(String)
-IntegerParam = ValueTypeParam(Integer)
-FloatParam = ValueTypeParam(Float)
+StringParam = _ValueTypeParam(String)
+IntegerParam = _ValueTypeParam(Integer)
+FloatParam = _ValueTypeParam(Float)
+
+type ParamTypes = _AddressParam | _ValueTypeParam
